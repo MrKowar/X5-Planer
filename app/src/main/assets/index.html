@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>График Смен</title>
+    <style>
+        :root { --primary: #2196F3; --vacation: #FF9800; --bg: #f5f7fa; --text: #333; --danger: #f44336; --ai-color: #9c27b0; --success: #4CAF50; --rain: #03A9F4; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); padding: 16px; }
+        .screen { display: none; flex-direction: column; min-height: 90vh; }
+        .screen.active { display: flex; }
+        input[type="text"], input[type="number"], input[type="date"] { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
+        button:active { opacity: 0.8; }
+        .btn-secondary { background: #eee; color: #333; }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-ai { background: var(--ai-color); }
+        .btn-nav { width: auto; padding: 8px 16px; margin: 0; border-radius: 6px; }
+
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; }
+
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; }
+        .tabs button { margin-top: 0; padding: 12px; font-size: 14px; border-radius: 8px 8px 0 0; opacity: 0.6; flex: 1; min-width: 110px; }
+        .tabs button.active { opacity: 1; border-bottom: 3px solid var(--primary); }
+
+        .calendar-header, .week-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-weight: bold; font-size: 16px; text-align: center; }
+        .calendar-nav { cursor: pointer; padding: 8px 16px; background: #eee; border-radius: 6px; user-select: none; }
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 12px; color: #888; margin-bottom: 8px; font-weight: bold; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+
+        .day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; border: 1px solid #eaeaea; border-radius: 8px; cursor: pointer; font-size: 16px; transition: 0.1s; user-select: none; position: relative; min-width: 0; overflow: hidden; }
+        .day.empty { background: transparent; border: none; cursor: default; }
+
+        /* Стили состояний дня */
+        .day.selected { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
+        .day.vacation { background: var(--vacation); color: white; border-color: var(--vacation); font-weight: bold; }
+        .day.rainy { border-bottom: 5px solid var(--rain); }
+        .day.profitable { background: var(--success); color: white; border-color: #388E3C; font-weight: bold; }
+        .day.profitable.selected { background: #2E7D32; box-shadow: inset 0 0 8px rgba(0,0,0,0.3); }
+
+        .slot-indicator { position: absolute; bottom: 4px; font-size: 9px; color: var(--success); font-weight: bold; width: 100%; text-align: center; white-space: nowrap; line-height: 1; }
+        .day.selected .slot-indicator, .day.profitable .slot-indicator { color: rgba(255,255,255,0.9); }
+        .day.rainy .slot-indicator { bottom: 8px; }
+
+        .mode-selector { display: flex; gap: 10px; margin-bottom: 16px; }
+        .mode-selector label { flex: 1; text-align: center; padding: 10px; background: #eee; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .mode-selector input[type="radio"] { display: none; }
+        .mode-selector label.active-shift { background: #e3f2fd; color: var(--primary); border: 1px solid var(--primary); }
+        .mode-selector label.active-vacation { background: #fff3e0; color: var(--vacation); border: 1px solid var(--vacation); }
+
+        .schedule-day { background: white; border: 1px solid #eee; border-left: 5px solid var(--primary); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .schedule-date { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; color: #333; margin-bottom: 12px; }
+        .slot-info { font-size: 12px; color: #888; font-weight: normal; }
+
+        .workers-container { display: flex; flex-wrap: wrap; gap: 8px; }
+        .worker-badge { display: flex; align-items: center; background: #f0f7ff; color: var(--primary); padding: 6px 12px 6px 6px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .worker-badge.conflict { background: #ffebee; color: var(--danger); }
+        .worker-badge.empty-slot { background: #f5f5f5; color: #aaa; border: 1px dashed #ccc; }
+        .worker-badge.my-badge { cursor: pointer; border: 1px solid var(--primary); background: #e3f2fd; }
+
+        .worker-icon { background: var(--primary); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; justify-content: center; align-items: center; font-size: 13px; margin-right: 8px; font-weight: bold; text-transform: uppercase; }
+        .worker-icon.conflict { background: var(--danger); }
+        .worker-icon.empty { background: #ccc; }
+
+        .conflict-section { margin-top: 12px; border-top: 1px dashed #ffcdd2; padding-top: 12px; }
+        .conflict-title { color: var(--danger); font-weight: bold; font-size: 13px; margin-bottom: 8px; text-transform: uppercase; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; }
+        .modal-content { background: #fff; width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-sizing: border-box; }
+        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 16px; text-align: center; color: var(--primary); }
+
+        .vacation-list { padding: 0; list-style: none; margin: 10px 0; max-height: 200px; overflow-y: auto; }
+        .vacation-list li { background: #fff3e0; padding: 10px; border-radius: 8px; margin-bottom: 6px; border-left: 4px solid var(--vacation); font-weight: bold; color: #555; }
+
+        .toggle-group { display: flex; gap: 8px; margin-bottom: 16px; }
+        .toggle-btn { flex: 1; padding: 12px; text-align: center; background: #eee; border-radius: 8px; font-weight: bold; color: #555; transition: 0.2s; cursor: pointer; user-select: none; }
+        .toggle-btn.active-yes { background: var(--success); color: white; }
+        .toggle-btn.active-no { background: var(--danger); color: white; }
+
+        .report-label { font-size: 14px; font-weight: bold; color: #555; margin-top: 12px; margin-bottom: 4px; display: block; }
+        .report-item { background: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--primary); }
+        .report-item.no-comment { border-left-color: var(--danger); background: #ffebee; }
+
+        .ai-card { border-left: 5px solid var(--ai-color); background: #fbf1fd; }
+        .ai-result-item { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--success); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        #toast { visibility: hidden; min-width: 280px; max-width: 90%; background-color: #323232; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; font-size: 15px; transform: translateX(-50%); box-shadow: 0px 4px 12px rgba(0,0,0,0.4); font-weight: bold; }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 3.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+<div id="toast">Уведомление</div>
+
+<!-- Модальное окно отпусков -->
+<div id="vacationModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-title" style="color: var(--vacation);">Отпуска на <span id="vacationModalDate"></span> 🏖️</div>
+        <div id="vacationModalList" style="margin-bottom: 16px;"></div>
+        <button class="btn-secondary" onclick="document.getElementById('vacationModal').style.display='none'">Закрыть</button>
+    </div>
+</div>
+
+<!-- Модальное окно отчета -->
+<div id="reportModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-title">Смена завершена! 🏁</div>
+        <p style="text-align:center; color:#666; margin-top:0; font-size:14px;">Пожалуйста, заполните краткий отчет о проделанной работе.</p>
+        <label class="report-label">Количество выполненных заказов:</label>
+        <input type="number" id="repOrders" placeholder="Например: 24" min="0">
+        <label class="report-label">Были отключения (пр-т Дериглазова)?</label>
+        <div class="toggle-group" id="tglDeriglazova">
+            <div class="toggle-btn" onclick="setToggle('tglDeriglazova', true)">Да</div>
+            <div class="toggle-btn active-no" onclick="setToggle('tglDeriglazova', false)">Нет</div>
+        </div>
+        <label class="report-label">Были проблемы с GPS?</label>
+        <div class="toggle-group" id="tglGPS">
+            <div class="toggle-btn" onclick="setToggle('tglGPS', true)">Да</div>
+            <div class="toggle-btn active-no" onclick="setToggle('tglGPS', false)">Нет</div>
+        </div>
+        <label class="report-label">Брали перерыв?</label>
+        <div class="toggle-group" id="tglBreak">
+            <div class="toggle-btn" onclick="setToggle('tglBreak', true)">Да</div>
+            <div class="toggle-btn active-no" onclick="setToggle('tglBreak', false)">Нет</div>
+        </div>
+        <button class="btn-success" onclick="submitReport(false)">Отправить отчет</button>
+        <button class="btn-secondary" onclick="submitReport(true)" style="margin-top:8px;">Без комментариев</button>
+    </div>
+</div>
+
+<!-- Окно логина -->
+<div id="authScreen" class="screen active card" style="justify-content: center; max-height: 400px; margin-top: 20vh;">
+    <h2 style="margin-top:0; text-align: center;">Вход в систему</h2>
+    <input type="text" id="firstName" placeholder="Имя (например, Никита)">
+    <input type="text" id="lastName" placeholder="Фамилия">
+    <button onclick="attemptLogin()">Войти</button>
+</div>
+
+<div id="mainScreen" class="screen">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 id="greetingTitle" style="margin:0;"></h2>
+        <span onclick="logout()" style="color:var(--danger); font-size:14px; font-weight:bold; cursor:pointer;">Выйти ↪</span>
+    </div>
+
+    <div class="tabs">
+        <button id="tabPersonal" class="active" onclick="switchTab('personal')">Мои заявки</button>
+        <button id="tabGeneral" class="btn-secondary" onclick="switchTab('general')">Общая доска</button>
+        <button id="tabEmployees" class="btn-secondary" onclick="switchTab('employees')" style="display:none;">Сотрудники</button>
+        <button id="tabReports" class="btn-secondary" onclick="switchTab('reports')" style="display:none;">Отчеты</button>
+        <button id="tabAnalytics" class="btn-secondary" onclick="switchTab('analytics')" style="display:none;">Аналитика 🤖</button>
+    </div>
+
+    <div id="personalTab">
+        <div class="mode-selector" id="modeSelector">
+            <label class="active-shift" onclick="setMode('shift', this)">
+                <input type="radio" name="clickMode" value="shift" checked>
+                <span>Выбор смен</span>
+            </label>
+            <label onclick="setMode('vacation', this)">
+                <input type="radio" name="clickMode" value="vacation">
+                <span>Отпуск</span>
+            </label>
+        </div>
+
+        <div class="card" style="display:flex; flex-direction:column;">
+            <div class="calendar-header">
+                <div class="calendar-nav" onclick="changeMonth(-1)">❮</div>
+                <div id="monthYearDisplay"></div>
+                <div class="calendar-nav" onclick="changeMonth(1)">❯</div>
+            </div>
+            <div class="weekdays">
+                <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+            </div>
+            <div id="calendarGrid" class="days-grid"></div>
+        </div>
+        <button onclick="saveData()" style="margin-top: 10px; margin-bottom: 20px;">Отправить заявку</button>
+    </div>
+
+    <div id="generalTab" style="display: none;">
+        <div class="week-header">
+            <button class="btn-secondary btn-nav" onclick="changeWeek(-1)">❮ Прошлая</button>
+            <div id="weekDisplay" style="flex:1;">Текущая неделя</div>
+            <button class="btn-secondary btn-nav" onclick="changeWeek(1)">Следующая ❯</button>
+        </div>
+        <div id="scheduleContainer">
+            <p style="text-align: center; color: #888;">Загрузка графика...</p>
+        </div>
+    </div>
+
+    <div id="employeesTab" style="display: none;">
+        <div id="employeesList"></div>
+    </div>
+
+    <div id="reportsTab" style="display: none;">
+        <div class="card">
+            <h3 style="margin-top:0;">Ежедневные отчеты</h3>
+            <input type="date" id="adminReportDate" onchange="loadAdminReports()">
+            <div id="reportsContainer" style="margin-top: 16px;"></div>
+        </div>
+    </div>
+
+    <div id="analyticsTab" style="display: none;">
+        <div class="card ai-card">
+            <h3 style="margin-top:0;">ИИ-Анализ статистики 🤖</h3>
+            <p style="font-size: 13px; color: #666; margin-top:0;">Бот рассчитает нагрузку на основе предыдущих отчетов и найдет самые прибыльные дни для курьеров.</p>
+            <button class="btn-ai" onclick="runAIAnalysis()">Проанализировать базу</button>
+            <div id="aiResults" style="margin-top: 16px;"></div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Ручное создание прогноза</h3>
+            <input type="date" id="manualProfitableDate">
+            <input type="text" id="manualProfitableReason" placeholder="Причина (например: Праздник 8 Марта)">
+            <button class="btn-success" onclick="addManualProfitableDay()">Опубликовать прибыльный день</button>
+
+            <h4 style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">Активные прибыльные дни</h4>
+            <div id="profitableList"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2LoXYPBph2mKVF7JyLIVKJdpORKwq3xE",
+        projectId: "x5-planer",
+        databaseURL: "https://x5-planer-default-rtdb.europe-west1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentUser = { firstName: '', lastName: '', selectedDates: [], vacationDates: [] };
+    let currentDate = new Date();
+    let currentMonth = currentDate.getMonth();
+    let currentYear = currentDate.getFullYear();
+    let currentMode = 'shift';
+    let isAdmin = false;
+    let weekOffset = 0;
+
+    let globalSchedule = { approved: {}, unplanned: {} };
+    let slotLimitsData = {};
+    let reportData = { deriglazova: false, gps: false, break: false };
+    let globalUsersData = {}; // Глобальная переменная для всех данных пользователей
+
+    let rainyDays = [];
+    let profitableDays = {};
+    const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+
+    window.onload = function() {
+        fetchWeather();
+        let savedFirst = localStorage.getItem('plannerFirst');
+        let savedLast = localStorage.getItem('plannerLast');
+        if (savedFirst && savedLast) {
+            document.getElementById('firstName').value = savedFirst;
+            document.getElementById('lastName').value = savedLast;
+            login();
+        }
+    };
+
+    function fetchWeather() {
+        const apiKey = 'b65891cecdde9f834fec74f7a083d45c';
+        fetch(`https://api.openweathermap.org/data/2.5/forecast?q=Kursk,RU&appid=${apiKey}&units=metric&lang=ru`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.list) {
+                    data.list.forEach(item => {
+                        if (item.weather[0].main.toLowerCase().includes('rain') || item.weather[0].description.toLowerCase().includes('дождь')) {
+                            let dateStr = item.dt_txt.split(' ')[0];
+                            if (!rainyDays.includes(dateStr)) { rainyDays.push(dateStr); }
+                        }
+                    });
+                    renderCalendar();
+                }
+            }).catch(err => console.error('Ошибка получения погоды:', err));
+    }
+
+    function showToast(message) {
+        let toast = document.getElementById("toast");
+        toast.innerText = message;
+        toast.className = "show";
+        setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 4000);
+    }
+
+    function attemptLogin() {
+        const fName = document.getElementById('firstName').value.trim();
+        const lName = document.getElementById('lastName').value.trim();
+        if(!fName || !lName) { showToast("Введите имя и фамилию"); return; }
+        if (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко') {
+            login(); return;
+        }
+        const userKey = fName + "_" + lName;
+        db.ref('users_schedules/' + userKey).once('value').then(snap => {
+            if (snap.exists() && !localStorage.getItem('plannerFirst')) showToast("Этот пользователь уже зарегистрирован.");
+            else login();
+        }).catch(err => login());
+    }
+
+    function login() {
+        const fName = document.getElementById('firstName').value.trim();
+        const lName = document.getElementById('lastName').value.trim();
+        currentUser.firstName = fName; currentUser.lastName = lName;
+        localStorage.setItem('plannerFirst', fName); localStorage.setItem('plannerLast', lName);
+
+        // --- Получаем версию приложения из Android Studio ---
+        let appVer = 'Старое/Веб';
+        if (window.AndroidApp) {
+            appVer = 'v' + window.AndroidApp.getAppVersion();
+        }
+
+        document.getElementById('authScreen').classList.remove('active');
+        document.getElementById('mainScreen').classList.add('active');
+
+        if (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко') {
+            isAdmin = true;
+            document.getElementById('greetingTitle').innerHTML = '👑 ' + fName;
+            document.getElementById('tabEmployees').style.display = 'block';
+            document.getElementById('tabReports').style.display = 'block';
+            document.getElementById('tabAnalytics').style.display = 'block';
+
+            let modeSelector = document.getElementById('modeSelector');
+            if (!document.getElementById('adminModeLabel')) {
+                let adminLabel = document.createElement('label');
+                adminLabel.id = 'adminModeLabel';
+                adminLabel.innerHTML = '<input type="radio" name="clickMode" value="slots"><span>Места 👑</span>';
+                adminLabel.onclick = function() { setMode('slots', this); };
+                modeSelector.appendChild(adminLabel);
+            }
+            document.getElementById('adminReportDate').value = getTodayDateStr();
+            loadAdminReports();
+        } else {
+            document.getElementById('greetingTitle').innerText = fName;
+        }
+
+        const userKey = fName + "_" + lName;
+
+        // Сразу обновляем версию приложения при логине
+        db.ref('users_schedules/' + userKey).update({ appVersion: appVer });
+
+        db.ref('users_schedules/' + userKey).once('value').then(snap => {
+            const data = snap.val();
+            if (data) {
+                currentUser.selectedDates = data.selectedDates || [];
+                currentUser.vacationDates = data.vacationDates || [];
+            }
+            renderCalendar();
+        });
+
+        // Слушатель всех сотрудников (для вкладки Сотрудники и для модального окна отпусков)
+        db.ref('users_schedules').on('value', snap => {
+            globalUsersData = snap.val() || {};
+            if (isAdmin) loadEmployees();
+        });
+
+        db.ref('slot_limits').on('value', snap => { slotLimitsData = snap.val() || {}; renderCalendar(); renderWeeklySchedule(); });
+
+        db.ref('profitable_days').on('value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
+
+        db.ref('final_schedule').on('value', (snapshot) => {
+            globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
+            renderWeeklySchedule();
+            if (!isAdmin) checkEveningReport(userKey);
+        });
+    }
+
+    function logout() { localStorage.removeItem('plannerFirst'); localStorage.removeItem('plannerLast'); location.reload(); }
+
+    function switchTab(tab) {
+        ['personalTab', 'generalTab', 'employeesTab', 'reportsTab', 'analyticsTab'].forEach(t => document.getElementById(t).style.display = 'none');
+        document.getElementById(tab + 'Tab').style.display = 'block';
+
+        document.querySelectorAll('.tabs button').forEach(btn => btn.className = 'btn-secondary');
+        let activeBtn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+        if(activeBtn) activeBtn.className = 'active';
+    }
+
+    function setMode(mode, element) {
+        currentMode = mode;
+        document.querySelectorAll('.mode-selector label').forEach(lbl => {
+            lbl.classList.remove('active-shift', 'active-vacation');
+            lbl.style.background = '#eee'; lbl.style.border = 'none'; lbl.style.color = '#333';
+        });
+        if (mode === 'shift') { element.classList.add('active-shift'); element.style.background = '#e3f2fd'; element.style.color = 'var(--primary)'; element.style.border = '1px solid var(--primary)'; }
+        else if (mode === 'vacation') { element.classList.add('active-vacation'); element.style.background = '#fff3e0'; element.style.color = 'var(--vacation)'; element.style.border = '1px solid var(--vacation)'; }
+        else if (mode === 'slots') { element.style.background = '#f3e5f5'; element.style.color = '#9c27b0'; element.style.border = '1px solid #9c27b0'; }
+    }
+
+    function changeMonth(offset) {
+        currentMonth += offset;
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        renderCalendar();
+    }
+
+    // --- ОБНОВЛЕННАЯ ФУНКЦИЯ КЛИКА С МОДАЛЬНЫМ ОКНОМ ОТПУСКОВ ---
+    function toggleDate(dateStr, element) {
+        if (profitableDays[dateStr] && currentMode !== 'slots') {
+            showToast("🔥 Ожидается много заказов: " + profitableDays[dateStr]);
+        }
+
+        if (currentMode === 'slots') {
+            if (!isAdmin) return;
+            let currentLimit = slotLimitsData[dateStr] || 3;
+            let newLimit = prompt(`Управление слотами на ${dateStr}\n\nТекущее количество мест: ${currentLimit}\nВведите новое число мест:`, currentLimit);
+            if (newLimit !== null && newLimit.trim() !== "") {
+                let parsed = parseInt(newLimit);
+                if (!isNaN(parsed) && parsed >= 0) {
+                    db.ref('slot_limits/' + dateStr).set(parsed).then(() => {
+                        setTimeout(() => processQueueAndSave(dateStr, null), 1000);
+                    });
+                    showToast(`Лимит изменен на ${parsed}`);
+                }
+            }
+            return;
+        }
+
+        const shiftIndex = currentUser.selectedDates.indexOf(dateStr);
+        const vacIndex = currentUser.vacationDates.indexOf(dateStr);
+
+        if (currentMode === 'shift') {
+            if (vacIndex > -1) { currentUser.vacationDates.splice(vacIndex, 1); element.classList.remove('vacation'); }
+            if (shiftIndex > -1) { currentUser.selectedDates.splice(shiftIndex, 1); element.classList.remove('selected'); }
+            else { currentUser.selectedDates.push(dateStr); element.classList.add('selected'); }
+        } else if (currentMode === 'vacation') {
+            // Если включен режим отпуска, ставим или убираем отпуск пользователя
+            if (shiftIndex > -1) { currentUser.selectedDates.splice(shiftIndex, 1); element.classList.remove('selected'); }
+            if (vacIndex > -1) { currentUser.vacationDates.splice(vacIndex, 1); element.classList.remove('vacation'); }
+            else { currentUser.vacationDates.push(dateStr); element.classList.add('vacation'); }
+
+            // Собираем список других сотрудников в отпуске в этот день
+            let othersOnVacation = [];
+            let myKey = currentUser.firstName + "_" + currentUser.lastName;
+            for (let key in globalUsersData) {
+                if (key !== myKey) {
+                    let uData = globalUsersData[key];
+                    if (uData.vacationDates && uData.vacationDates.includes(dateStr)) {
+                        othersOnVacation.push(uData.firstName + " " + uData.lastName);
+                    }
+                }
+            }
+
+            // Показываем окошко со списком
+            document.getElementById('vacationModalDate').innerText = dateStr;
+            let listDiv = document.getElementById('vacationModalList');
+            if (othersOnVacation.length > 0) {
+                listDiv.innerHTML = '<ul class="vacation-list"><li>' + othersOnVacation.join('</li><li>') + '</li></ul>';
+            } else {
+                listDiv.innerHTML = '<p style="color: #888; text-align: center; margin: 20px 0;">В этот день больше никого нет в отпуске.</p>';
+            }
+            document.getElementById('vacationModal').style.display = 'flex';
+        }
+    }
+
+    function renderCalendar() {
+        document.getElementById('monthYearDisplay').innerText = monthNames[currentMonth] + ' ' + currentYear;
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        let firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        firstDay = firstDay === 0 ? 6 : firstDay - 1;
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        for (let i = 0; i < firstDay; i++) {
+            let emptyDiv = document.createElement('div'); emptyDiv.className = 'day empty'; grid.appendChild(emptyDiv);
+        }
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            let dayDiv = document.createElement('div');
+            dayDiv.className = 'day';
+            dayDiv.innerText = i;
+            const dateStr = `${currentYear}-${(currentMonth+1).toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
+
+            if (profitableDays[dateStr]) dayDiv.classList.add('profitable');
+            if (rainyDays.includes(dateStr)) dayDiv.classList.add('rainy');
+            if (currentUser.selectedDates.includes(dateStr)) dayDiv.classList.add('selected');
+            if (currentUser.vacationDates.includes(dateStr)) dayDiv.classList.add('vacation');
+
+            let limit = slotLimitsData[dateStr] || 3;
+            if (limit > 3) {
+                let indicator = document.createElement('div'); indicator.className = 'slot-indicator'; indicator.innerText = `Мест: ${limit}`; dayDiv.appendChild(indicator);
+            }
+
+            dayDiv.onclick = () => toggleDate(dateStr, dayDiv);
+            grid.appendChild(dayDiv);
+        }
+    }
+
+    function saveData() {
+        const userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let appVer = window.AndroidApp ? 'v' + window.AndroidApp.getAppVersion() : 'Старое/Веб';
+
+        db.ref('users_schedules/' + userKey).update({
+            firstName: currentUser.firstName,
+            lastName: currentUser.lastName,
+            selectedDates: currentUser.selectedDates,
+            vacationDates: currentUser.vacationDates,
+            appVersion: appVer
+        }).then(() => {
+            let schedule = globalSchedule;
+            if (!schedule.approved) schedule.approved = {};
+            if (!schedule.unplanned) schedule.unplanned = {};
+            currentUser.selectedDates.forEach(dateStr => {
+                let limit = slotLimitsData[dateStr] || 3;
+                if (!schedule.approved[dateStr]) schedule.approved[dateStr] = [];
+                if (!schedule.unplanned[dateStr]) schedule.unplanned[dateStr] = [];
+                schedule.unplanned[dateStr] = schedule.unplanned[dateStr].filter(w => w !== userKey);
+                if (!schedule.approved[dateStr].includes(userKey)) {
+                    if (schedule.approved[dateStr].length < limit) schedule.approved[dateStr].push(userKey);
+                    else if (!schedule.unplanned[dateStr].includes(userKey)) schedule.unplanned[dateStr].push(userKey);
+                }
+            });
+            db.ref('final_schedule').set(schedule).then(() => { showToast("✅ Заявки сохранены!"); switchTab('general'); });
+        }).catch(error => showToast("❌ Ошибка: " + error.message));
+    }
+
+    function getTodayDateStr() { let d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`; }
+
+    function checkEveningReport(userKey) {
+        let todayStr = getTodayDateStr();
+        let d = new Date();
+        let moscowTime = new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + (3600000 * 3));
+        if (moscowTime.getHours() >= 21) {
+            let approvedWorkers = (globalSchedule.approved && globalSchedule.approved[todayStr]) ? globalSchedule.approved[todayStr] : [];
+            if (approvedWorkers.includes(userKey)) {
+                db.ref(`daily_reports/${todayStr}/${userKey}`).once('value').then(snap => { if (!snap.exists()) document.getElementById('reportModal').style.display = 'flex'; });
+            }
+        }
+    }
+
+    function setToggle(groupId, isYes) {
+        let btns = document.getElementById(groupId).getElementsByClassName('toggle-btn');
+        btns[0].className = 'toggle-btn ' + (isYes ? 'active-yes' : ''); btns[1].className = 'toggle-btn ' + (!isYes ? 'active-no' : '');
+        if(groupId === 'tglDeriglazova') reportData.deriglazova = isYes;
+        if(groupId === 'tglGPS') reportData.gps = isYes;
+        if(groupId === 'tglBreak') reportData.break = isYes;
+    }
+
+    function submitReport(isNoComment) {
+        const userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let payload = isNoComment ? { status: 'no_comment', timestamp: Date.now() } : { status: 'completed', orders: parseInt(document.getElementById('repOrders').value || "0"), deriglazova: reportData.deriglazova, gps: reportData.gps, break: reportData.break, timestamp: Date.now() };
+        db.ref(`daily_reports/${getTodayDateStr()}/${userKey}`).set(payload).then(() => { document.getElementById('reportModal').style.display = 'none'; showToast(isNoComment ? "Отчет пропущен" : "Спасибо! Отчет отправлен."); });
+    }
+
+    function runAIAnalysis() {
+        let results = document.getElementById('aiResults');
+        results.innerHTML = '<p style="color:#666;">⏳ Собираю и анализирую данные...</p>';
+
+        db.ref('daily_reports').once('value').then(snap => {
+            let data = snap.val();
+            if (!data) { results.innerHTML = '<p style="color:#d32f2f;">Недостаточно данных для ИИ-анализа.</p>'; return; }
+
+            let stats = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 0: [] };
+
+            for (let dateStr in data) {
+                let dayOfWeek = new Date(dateStr).getDay();
+                let totalOrders = 0; let count = 0;
+                for (let userKey in data[dateStr]) {
+                    let rep = data[dateStr][userKey];
+                    if (rep.status === 'completed' && rep.orders) { totalOrders += rep.orders; count++; }
+                }
+                if (count > 0) stats[dayOfWeek].push(totalOrders / count);
+            }
+
+            let html = '';
+            const dayNames = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+
+            for (let i = 0; i < 7; i++) {
+                if (stats[i].length > 0) {
+                    let avg = stats[i].reduce((a,b)=>a+b, 0) / stats[i].length;
+                    if (avg >= 20) {
+                        let nextDate = getNextDayOfWeek(i);
+                        let reason = `В ${dayNames[i].toLowerCase()} обычно высокая нагрузка (в среднем ${Math.round(avg)} заказов на курьера). Рекомендую добавить слоты!`;
+                        html += `<div class="ai-result-item">
+                                    <b>Прогноз на ${nextDate}</b><br>
+                                    <span style="font-size:13px; color:#555;">${reason}</span><br>
+                                    <button class="btn-success" style="padding:8px; font-size:14px; margin-top:8px;" onclick="approveForecast('${nextDate}', '${reason}')">Утвердить день</button>
+                                 </div>`;
+                    }
+                }
+            }
+            results.innerHTML = html === '' ? '<p style="color:#555;">Пока нет ярко выраженных трендов высокой нагрузки (среднее < 20).</p>' : html;
+        });
+    }
+
+    function getNextDayOfWeek(dayIndex) {
+        let d = new Date(); d.setDate(d.getDate() + (dayIndex + 7 - d.getDay()) % 7);
+        if (d.getDay() === new Date().getDay()) d.setDate(d.getDate() + 7);
+        return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+    }
+
+    function approveForecast(dateStr, reason) {
+        db.ref('profitable_days/' + dateStr).set(reason);
+        showToast('✅ Прогноз утвержден и разослан курьерам!');
+    }
+
+    function addManualProfitableDay() {
+        let d = document.getElementById('manualProfitableDate').value;
+        let r = document.getElementById('manualProfitableReason').value;
+        if (d && r) { approveForecast(d, r); document.getElementById('manualProfitableReason').value = ''; }
+        else { showToast('Заполните дату и причину!'); }
+    }
+
+    function renderProfitableList() {
+        if (!isAdmin) return;
+        let container = document.getElementById('profitableList');
+        let html = '';
+        for (let d in profitableDays) {
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f5f5f5; padding:10px; margin-bottom:6px; border-radius:6px; border-left:3px solid var(--success);">
+                        <div style="font-size:13px;"><b>${d}</b><br>${profitableDays[d]}</div>
+                        <button class="btn-danger" style="width:auto; padding:6px 12px; margin:0;" onclick="db.ref('profitable_days/${d}').remove()">✕</button>
+                     </div>`;
+        }
+        container.innerHTML = html || '<p style="color:#888;">Нет активных зеленых дней.</p>';
+    }
+
+    function getMonday(d) { d = new Date(d); let day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6:1); return new Date(d.setDate(diff)); }
+    function changeWeek(offset) { weekOffset += offset; renderWeeklySchedule(); }
+
+    function renderWeeklySchedule() {
+        const container = document.getElementById('scheduleContainer'); container.innerHTML = '';
+        let baseDate = new Date(); baseDate.setDate(baseDate.getDate() + (weekOffset * 7));
+        let monday = getMonday(baseDate); let weekEnd = new Date(monday); weekEnd.setDate(weekEnd.getDate() + 6);
+        document.getElementById('weekDisplay').innerText = `${monday.getDate()} ${monthNames[monday.getMonth()].substring(0,3)} - ${weekEnd.getDate()} ${monthNames[weekEnd.getMonth()].substring(0,3)}`;
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let daysHtml = '';
+
+        for (let i = 0; i < 7; i++) {
+            let currentDay = new Date(monday); currentDay.setDate(monday.getDate() + i);
+            let dateStr = `${currentDay.getFullYear()}-${(currentDay.getMonth()+1).toString().padStart(2, '0')}-${currentDay.getDate().toString().padStart(2, '0')}`;
+            let dayName = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"][currentDay.getDay()];
+            let limit = slotLimitsData[dateStr] || 3;
+            let approvedWorkers = (globalSchedule.approved && globalSchedule.approved[dateStr]) ? globalSchedule.approved[dateStr] : [];
+            let reserveWorkers = (globalSchedule.unplanned && globalSchedule.unplanned[dateStr]) ? globalSchedule.unplanned[dateStr] : [];
+
+            daysHtml += `<div class="schedule-day"><div class="schedule-date"><span>📅 ${dayName}, ${currentDay.getDate()} ${monthNames[currentDay.getMonth()]}</span><span class="slot-info">Занято: ${approvedWorkers.length}/${limit}</span></div><div class="workers-container">`;
+            approvedWorkers.forEach(worker => {
+                let displayName = worker.replace(/_/g, ' '); let isMe = (worker === userKey);
+                let adminBtn = isAdmin ? `<span style="color:var(--danger); margin-left:8px; font-weight:bold; cursor:pointer;" onclick="adminRemoveWorker('${dateStr}', '${worker}')">✕</span>` : '';
+                let clickAction = (isMe && !isAdmin) ? `onclick="cancelShift('${dateStr}', '${worker}')"` : '';
+                daysHtml += `<div class="worker-badge ${isMe ? 'my-badge' : ''}" ${clickAction}><div class="worker-icon">${displayName.charAt(0)}</div>${displayName} ${adminBtn}</div>`;
+            });
+            for(let j=0; j < (limit - approvedWorkers.length); j++) daysHtml += `<div class="worker-badge empty-slot"><div class="worker-icon empty">?</div>Свободное место</div>`;
+            daysHtml += `</div>`;
+
+            if (reserveWorkers.length > 0) {
+                daysHtml += `<div class="conflict-section"><div class="conflict-title">В резерве (ждут места):</div><div class="workers-container">`;
+                reserveWorkers.forEach(worker => { daysHtml += `<div class="worker-badge conflict"><div class="worker-icon conflict">${worker.replace(/_/g, ' ').charAt(0)}</div>${worker.replace(/_/g, ' ')}</div>`; });
+                daysHtml += `</div></div>`;
+            }
+            daysHtml += `</div>`;
+        }
+        container.innerHTML = daysHtml;
+    }
+
+    function processQueueAndSave(dateStr, workerToRemove) {
+        let approved = (globalSchedule.approved && globalSchedule.approved[dateStr]) ? [...globalSchedule.approved[dateStr]] : [];
+        let unplanned = (globalSchedule.unplanned && globalSchedule.unplanned[dateStr]) ? [...globalSchedule.unplanned[dateStr]] : [];
+        let limit = slotLimitsData[dateStr] || 3;
+
+        if (workerToRemove) {
+            approved = approved.filter(w => w !== workerToRemove);
+            unplanned = unplanned.filter(w => w !== workerToRemove);
+        }
+
+        while (approved.length < limit && unplanned.length > 0) {
+            approved.push(unplanned.shift());
+        }
+
+        db.ref(`final_schedule/approved/${dateStr}`).set(approved);
+        db.ref(`final_schedule/unplanned/${dateStr}`).set(unplanned);
+    }
+
+    window.cancelShift = function(dateStr, workerKey) {
+        if (!isAdmin && confirm(`Отменить свою смену на этот день?`)) {
+            processQueueAndSave(dateStr, workerKey);
+        }
+    }
+
+    window.adminRemoveWorker = function(dateStr, workerKey) {
+        if(confirm(`[АДМИН] Удалить сотрудника со смены?`)) {
+            processQueueAndSave(dateStr, workerKey);
+        }
+    }
+
+    // --- ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ВКЛАДКИ СОТРУДНИКОВ (ВИДНА ВЕРСИЯ ПРИЛОЖЕНИЯ) ---
+    function loadEmployees() {
+        let container = document.getElementById('employeesList');
+        if (!globalUsersData) { container.innerHTML = '<p>Нет данных</p>'; return; }
+
+        let html = '';
+        for (let key in globalUsersData) {
+            let emp = globalUsersData[key];
+            let ver = emp.appVersion || 'Старое/Веб';
+
+            // Если версия старая или неизвестная - красным, если новая (считалась с Android) - зеленым
+            let verColor = (ver === 'Старое/Веб') ? 'var(--danger)' : 'var(--success)';
+
+            html += `<div class="card" style="padding: 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div>
+                            <b>${emp.firstName} ${emp.lastName}</b><br>
+                            <span style="font-size:12px; color:${verColor}; font-weight:bold;">📱 Версия: ${ver}</span>
+                        </div>
+                        <button class="btn-danger btn-nav" onclick="db.ref('users_schedules/${key}').remove()">Удалить</button>
+                     </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function loadAdminReports() {
+        if (!isAdmin) return;
+        let d = document.getElementById('adminReportDate').value; let container = document.getElementById('reportsContainer');
+        if (!d) { container.innerHTML = '<p style="color:#888;">Выберите дату.</p>'; return; }
+        db.ref(`daily_reports/${d}`).on('value', snap => {
+            let data = snap.val(); if (!data) { container.innerHTML = '<p style="color:#888;">Отчетов нет.</p>'; return; }
+            let html = '';
+            for (let k in data) {
+                let r = data[k]; let n = k.replace(/_/g, ' ');
+                html += r.status === 'no_comment' ? `<div class="report-item no-comment"><b>${n}</b><br><span style="color:var(--danger); font-size:13px; font-weight:bold;">Отказ от отчета</span></div>` : `<div class="report-item"><b>${n}</b><br><span style="font-size:13px; color:#555;">📦 Заказов: <b>${r.orders}</b><br>🏢 Дериглазова: ${r.deriglazova ? '<b>Да</b>' : 'Нет'}<br>🛰 GPS проблемы: ${r.gps ? '<b style="color:var(--danger);">Да</b>' : 'Нет'}<br>☕ Перерыв: ${r.break ? 'Да' : 'Нет'}</span></div>`;
+            }
+            container.innerHTML = html;
+        });
+    }
+</script>
+</body>
+</html>
