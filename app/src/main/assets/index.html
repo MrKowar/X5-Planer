@@ -43,6 +43,8 @@
         .day.selected .slot-indicator, .day.profitable .slot-indicator { color: rgba(255,255,255,0.9); }
         .day.rainy .slot-indicator { bottom: 8px; }
 
+        .vacation-stripe { position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--vacation); border-radius: 8px 8px 0 0; z-index: 10; cursor: pointer; }
+
         .mode-selector { display: flex; gap: 10px; margin-bottom: 16px; }
         .mode-selector label { flex: 1; text-align: center; padding: 10px; background: #eee; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
         .mode-selector input[type="radio"] { display: none; }
@@ -147,6 +149,7 @@
     <div class="tabs">
         <button id="tabPersonal" class="active" onclick="switchTab('personal')">Мои заявки</button>
         <button id="tabGeneral" class="btn-secondary" onclick="switchTab('general')">Общая доска</button>
+        <button id="tabVacations" class="btn-secondary" onclick="switchTab('vacations')">Отпуски</button>
         <button id="tabEmployees" class="btn-secondary" onclick="switchTab('employees')" style="display:none;">Сотрудники</button>
         <button id="tabReports" class="btn-secondary" onclick="switchTab('reports')" style="display:none;">Отчеты</button>
         <button id="tabAnalytics" class="btn-secondary" onclick="switchTab('analytics')" style="display:none;">Аналитика 🤖</button>
@@ -186,6 +189,15 @@
         </div>
         <div id="scheduleContainer">
             <p style="text-align: center; color: #888;">Загрузка графика...</p>
+        </div>
+    </div>
+
+    <div id="vacationsTab" style="display: none;">
+        <div class="card">
+            <h3 style="margin-top:0; color: var(--vacation);">Запланированные отпуска</h3>
+            <div id="allVacationsList" style="margin-top: 16px;">
+                <p style="text-align: center; color: #888;">Загрузка...</p>
+            </div>
         </div>
     </div>
 
@@ -369,12 +381,16 @@
     function logout() { localStorage.removeItem('plannerFirst'); localStorage.removeItem('plannerLast'); location.reload(); }
 
     function switchTab(tab) {
-        ['personalTab', 'generalTab', 'employeesTab', 'reportsTab', 'analyticsTab'].forEach(t => document.getElementById(t).style.display = 'none');
+        ['personalTab', 'generalTab', 'vacationsTab', 'employeesTab', 'reportsTab', 'analyticsTab'].forEach(t => document.getElementById(t).style.display = 'none');
         document.getElementById(tab + 'Tab').style.display = 'block';
 
         document.querySelectorAll('.tabs button').forEach(btn => btn.className = 'btn-secondary');
         let activeBtn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
         if(activeBtn) activeBtn.className = 'active';
+
+        if (tab === 'vacations') {
+            renderAllVacations();
+        }
     }
 
     function setMode(mode, element) {
@@ -429,29 +445,31 @@
             if (shiftIndex > -1) { currentUser.selectedDates.splice(shiftIndex, 1); element.classList.remove('selected'); }
             if (vacIndex > -1) { currentUser.vacationDates.splice(vacIndex, 1); element.classList.remove('vacation'); }
             else { currentUser.vacationDates.push(dateStr); element.classList.add('vacation'); }
+        }
+    }
 
-            // Собираем список других сотрудников в отпуске в этот день
-            let othersOnVacation = [];
-            let myKey = currentUser.firstName + "_" + currentUser.lastName;
-            for (let key in globalUsersData) {
-                if (key !== myKey) {
-                    let uData = globalUsersData[key];
-                    if (uData.vacationDates && uData.vacationDates.includes(dateStr)) {
-                        othersOnVacation.push(uData.firstName + " " + uData.lastName);
-                    }
+    function showVacationModal(dateStr, event) {
+        if (event) event.stopPropagation();
+
+        let othersOnVacation = [];
+        let myKey = currentUser.firstName + "_" + currentUser.lastName;
+        for (let key in globalUsersData) {
+            if (key !== myKey) {
+                let uData = globalUsersData[key];
+                if (uData.vacationDates && uData.vacationDates.includes(dateStr)) {
+                    othersOnVacation.push(uData.firstName + " " + uData.lastName);
                 }
             }
-
-            // Показываем окошко со списком
-            document.getElementById('vacationModalDate').innerText = dateStr;
-            let listDiv = document.getElementById('vacationModalList');
-            if (othersOnVacation.length > 0) {
-                listDiv.innerHTML = '<ul class="vacation-list"><li>' + othersOnVacation.join('</li><li>') + '</li></ul>';
-            } else {
-                listDiv.innerHTML = '<p style="color: #888; text-align: center; margin: 20px 0;">В этот день больше никого нет в отпуске.</p>';
-            }
-            document.getElementById('vacationModal').style.display = 'flex';
         }
+
+        document.getElementById('vacationModalDate').innerText = dateStr;
+        let listDiv = document.getElementById('vacationModalList');
+        if (othersOnVacation.length > 0) {
+            listDiv.innerHTML = '<ul class="vacation-list"><li>' + othersOnVacation.join('</li><li>') + '</li></ul>';
+        } else {
+            listDiv.innerHTML = '<p style="color: #888; text-align: center; margin: 20px 0;">В этот день больше никого нет в отпуске.</p>';
+        }
+        document.getElementById('vacationModal').style.display = 'flex';
     }
 
     function renderCalendar() {
@@ -477,6 +495,24 @@
             if (currentUser.selectedDates.includes(dateStr)) dayDiv.classList.add('selected');
             if (currentUser.vacationDates.includes(dateStr)) dayDiv.classList.add('vacation');
 
+            // Check if others are on vacation to show the stripe
+            let myKey = currentUser.firstName + "_" + currentUser.lastName;
+            let othersVacationCount = 0;
+            for (let key in globalUsersData) {
+                if (key !== myKey) {
+                    let uData = globalUsersData[key];
+                    if (uData.vacationDates && uData.vacationDates.includes(dateStr)) {
+                        othersVacationCount++;
+                    }
+                }
+            }
+            if (othersVacationCount > 0) {
+                let stripe = document.createElement('div');
+                stripe.className = 'vacation-stripe';
+                stripe.onclick = (e) => showVacationModal(dateStr, e);
+                dayDiv.appendChild(stripe);
+            }
+
             let limit = slotLimitsData[dateStr] || 3;
             if (limit > 3) {
                 let indicator = document.createElement('div'); indicator.className = 'slot-indicator'; indicator.innerText = `Мест: ${limit}`; dayDiv.appendChild(indicator);
@@ -501,16 +537,43 @@
             let schedule = globalSchedule;
             if (!schedule.approved) schedule.approved = {};
             if (!schedule.unplanned) schedule.unplanned = {};
+
+            // Remove user from dates they unselected
+            for (let dateStr in schedule.approved) {
+                if (!currentUser.selectedDates.includes(dateStr)) {
+                    schedule.approved[dateStr] = schedule.approved[dateStr].filter(w => w !== userKey);
+                }
+            }
+            for (let dateStr in schedule.unplanned) {
+                if (!currentUser.selectedDates.includes(dateStr)) {
+                    schedule.unplanned[dateStr] = schedule.unplanned[dateStr].filter(w => w !== userKey);
+                }
+            }
+
+            // Process selections
             currentUser.selectedDates.forEach(dateStr => {
                 let limit = slotLimitsData[dateStr] || 3;
                 if (!schedule.approved[dateStr]) schedule.approved[dateStr] = [];
                 if (!schedule.unplanned[dateStr]) schedule.unplanned[dateStr] = [];
-                schedule.unplanned[dateStr] = schedule.unplanned[dateStr].filter(w => w !== userKey);
-                if (!schedule.approved[dateStr].includes(userKey)) {
-                    if (schedule.approved[dateStr].length < limit) schedule.approved[dateStr].push(userKey);
-                    else if (!schedule.unplanned[dateStr].includes(userKey)) schedule.unplanned[dateStr].push(userKey);
+
+                // Add to schedule if not already present
+                if (!schedule.approved[dateStr].includes(userKey) && !schedule.unplanned[dateStr].includes(userKey)) {
+                    if (schedule.approved[dateStr].length < limit) {
+                        schedule.approved[dateStr].push(userKey);
+                    } else {
+                        schedule.unplanned[dateStr].push(userKey);
+                    }
                 }
             });
+
+            // Promote from unplanned to approved if spaces freed up
+            for (let dateStr in schedule.approved) {
+                let limit = slotLimitsData[dateStr] || 3;
+                while (schedule.approved[dateStr].length < limit && schedule.unplanned[dateStr] && schedule.unplanned[dateStr].length > 0) {
+                    schedule.approved[dateStr].push(schedule.unplanned[dateStr].shift());
+                }
+            }
+
             db.ref('final_schedule').set(schedule).then(() => { showToast("✅ Заявки сохранены!"); switchTab('general'); });
         }).catch(error => showToast("❌ Ошибка: " + error.message));
     }
@@ -721,6 +784,46 @@
             }
             container.innerHTML = html;
         });
+    }
+
+    function renderAllVacations() {
+        let container = document.getElementById('allVacationsList');
+        if (!globalUsersData) {
+            container.innerHTML = '<p style="color:#888;">Нет данных.</p>';
+            return;
+        }
+
+        let html = '';
+        let hasVacations = false;
+
+        for (let key in globalUsersData) {
+            let emp = globalUsersData[key];
+            if (emp.vacationDates && emp.vacationDates.length > 0) {
+                hasVacations = true;
+
+                // Сортируем даты по возрастанию
+                let sortedDates = [...emp.vacationDates].sort((a, b) => new Date(a) - new Date(b));
+
+                // Форматируем даты для красивого вывода
+                let formattedDates = sortedDates.map(d => {
+                    let parts = d.split('-');
+                    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                });
+
+                html += `<div class="card" style="padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--vacation);">
+                            <b>${emp.firstName} ${emp.lastName}</b>
+                            <div style="font-size: 14px; color: #555; margin-top: 8px;">
+                                ${formattedDates.join(', ')}
+                            </div>
+                         </div>`;
+            }
+        }
+
+        if (hasVacations) {
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p style="color:#888; text-align: center;">Никто не запланировал отпуск.</p>';
+        }
     }
 </script>
 </body>
