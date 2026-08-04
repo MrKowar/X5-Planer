@@ -1,0 +1,223 @@
+<<<<<<< SEARCH
+    function initiateVacationOffer(dateStr) {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let targetWeek = getWeekKey(dateStr);
+        let userName = currentUser.firstName;
+
+        let freedSlots = 1;
+
+        // Instead of push, we use a predictable ID to avoid duplicates if they toggle on/off quickly
+        let offerId = userKey + "_" + dateStr;
+
+        db.ref(`vacation_offers/${targetWeek}/${offerId}`).once('value').then(snap => {
+            if (!snap.exists()) {
+                db.ref(`vacation_offers/${targetWeek}/${offerId}`).set({
+                    vacationUser: userKey,
+                    vacationUserName: userName,
+                    date: dateStr,
+                    slots: freedSlots,
+                    timestamp: Date.now(),
+                    responses: {}
+                });
+                showToast("Отпуск отмечен. Коллегам предложены доп. смены.");
+            }
+        });
+    }
+
+    function listenForVacationOffers() {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+
+        // Only listen for offers added *after* the user logs in this session to prevent spam of old offers,
+        // or check the current week. Here we limit by current timestamp to avoid historical spam.
+        let loginTime = Date.now();
+
+        db.ref('vacation_offers').on('value', snap => {
+            let offersByWeek = snap.val();
+            if (!offersByWeek) return;
+
+            // We use a flag to only show one modal at a time.
+            if (document.getElementById('vacationOfferModal') && document.getElementById('vacationOfferModal').style.display === 'flex') return;
+
+            for (let weekKey in offersByWeek) {
+                let offers = offersByWeek[weekKey];
+                for (let offerId in offers) {
+                    let offer = offers[offerId];
+                    // Skip our own vacations
+                    if (offer.vacationUser === userKey) continue;
+
+                    // Only process recent offers (e.g., from the last 24 hours, or just limit to the queue logic)
+                    // We check if it's still unresolved and we haven't responded
+                    if (!offer.responses || offer.responses[userKey] === undefined) {
+                        let takenSlots = 0;
+                        if (offer.responses) {
+                            for (let k in offer.responses) {
+                                if (offer.responses[k] === 'yes') takenSlots++;
+                            }
+                        }
+
+                        if (takenSlots < offer.slots) {
+                            // Show offer popup in a non-blocking modal
+                            showOfferPopup(weekKey, offerId, offer);
+                            return; // Only show one popup at a time
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function showOfferPopup(weekKey, offerId, offer) {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+
+        let modal = document.getElementById('vacationOfferModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'vacationOfferModal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="text-align:center;">
+                    <div class="modal-title" style="color:var(--primary);">Доп. смена! 🎁</div>
+                    <p id="vacationOfferText" style="margin-bottom: 20px; color: #555;"></p>
+                    <div style="display:flex; gap:10px;">
+                        <button id="vacationOfferYesBtn" class="btn-success" style="flex:1;">Да, беру</button>
+                        <button id="vacationOfferNoBtn" class="btn-danger" style="flex:1;">Нет, спасибо</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        document.getElementById('vacationOfferText').innerText = `Сотрудник ${offer.vacationUserName} в отпуске на ${offer.date}. Вы можете взять на 1 смену больше. Будете брать?`;
+
+        document.getElementById('vacationOfferYesBtn').onclick = function() {
+            modal.style.display = 'none';
+            db.ref(`vacation_offers/${weekKey}/${offerId}/responses/${userKey}`).set('yes');
+
+            if (!currentUser.extraShiftsAllowed) currentUser.extraShiftsAllowed = {};
+            if (!currentUser.extraShiftsAllowed[weekKey]) currentUser.extraShiftsAllowed[weekKey] = 0;
+            currentUser.extraShiftsAllowed[weekKey] += 1;
+
+            showToast("Вам доступна 1 доп. смена на этой неделе. Выберите её в календаре.");
+            db.ref('users_schedules/' + userKey + '/extraShiftsAllowed').set(currentUser.extraShiftsAllowed);
+        };
+
+        document.getElementById('vacationOfferNoBtn').onclick = function() {
+            modal.style.display = 'none';
+            db.ref(`vacation_offers/${weekKey}/${offerId}/responses/${userKey}`).set('no');
+            showToast("Вы отказались. Предложение переходит следующему.");
+        };
+
+        modal.style.display = 'flex';
+    }
+=======
+    function initiateVacationOffer(dateStr) {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let targetWeek = getWeekKey(dateStr);
+        let userName = currentUser.firstName;
+
+        let freedSlots = 1;
+        let offerId = userKey + "_" + dateStr;
+
+        // Create a deterministic queue of users who are NOT the one going on vacation
+        let queue = Object.keys(globalUsersData).filter(k => k !== userKey).sort();
+
+        db.ref(`vacation_offers/${targetWeek}/${offerId}`).once('value').then(snap => {
+            if (!snap.exists()) {
+                db.ref(`vacation_offers/${targetWeek}/${offerId}`).set({
+                    vacationUser: userKey,
+                    vacationUserName: userName,
+                    date: dateStr,
+                    slots: freedSlots,
+                    timestamp: Date.now(),
+                    queue: queue,
+                    currentQueueIndex: 0,
+                    status: 'open'
+                });
+                showToast("Отпуск отмечен. Коллегам предложены доп. смены.");
+            }
+        });
+    }
+
+    function listenForVacationOffers() {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+
+        db.ref('vacation_offers').on('value', snap => {
+            let offersByWeek = snap.val();
+            if (!offersByWeek) return;
+
+            // We use a flag to only show one modal at a time.
+            if (document.getElementById('vacationOfferModal') && document.getElementById('vacationOfferModal').style.display === 'flex') return;
+
+            for (let weekKey in offersByWeek) {
+                let offers = offersByWeek[weekKey];
+                for (let offerId in offers) {
+                    let offer = offers[offerId];
+
+                    // Only process open offers
+                    if (offer.status !== 'open') continue;
+                    // Ignore old offers (older than 24 hours) to prevent ancient spam
+                    if (Date.now() - offer.timestamp > 86400000) continue;
+
+                    // Sequential logic: Is it my turn?
+                    if (offer.queue && offer.queue.length > 0 && offer.currentQueueIndex < offer.queue.length) {
+                        if (offer.queue[offer.currentQueueIndex] === userKey) {
+                            showOfferPopup(weekKey, offerId, offer);
+                            return; // Only show one popup at a time
+                        }
+                    } else if (offer.queue && offer.currentQueueIndex >= offer.queue.length) {
+                        // Queue exhausted, close offer
+                        db.ref(`vacation_offers/${weekKey}/${offerId}/status`).set('exhausted');
+                    }
+                }
+            }
+        });
+    }
+
+    function showOfferPopup(weekKey, offerId, offer) {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+
+        let modal = document.getElementById('vacationOfferModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'vacationOfferModal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="text-align:center;">
+                    <div class="modal-title" style="color:var(--primary);">Доп. смена! 🎁</div>
+                    <p id="vacationOfferText" style="margin-bottom: 20px; color: #555;"></p>
+                    <div style="display:flex; gap:10px;">
+                        <button id="vacationOfferYesBtn" class="btn-success" style="flex:1;">Да, беру</button>
+                        <button id="vacationOfferNoBtn" class="btn-danger" style="flex:1;">Нет, спасибо</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        document.getElementById('vacationOfferText').innerText = `Сотрудник ${offer.vacationUserName} в отпуске на ${offer.date}. Вы можете взять на 1 смену больше. Будете брать?`;
+
+        document.getElementById('vacationOfferYesBtn').onclick = function() {
+            modal.style.display = 'none';
+            // Mark offer as closed since it was taken
+            db.ref(`vacation_offers/${weekKey}/${offerId}/status`).set('closed');
+
+            if (!currentUser.extraShiftsAllowed) currentUser.extraShiftsAllowed = {};
+            if (!currentUser.extraShiftsAllowed[weekKey]) currentUser.extraShiftsAllowed[weekKey] = 0;
+            currentUser.extraShiftsAllowed[weekKey] += 1;
+
+            showToast("Вам доступна 1 доп. смена на этой неделе. Выберите её в календаре.");
+            db.ref('users_schedules/' + userKey + '/extraShiftsAllowed').set(currentUser.extraShiftsAllowed);
+        };
+
+        document.getElementById('vacationOfferNoBtn').onclick = function() {
+            modal.style.display = 'none';
+            // Advance the queue
+            db.ref(`vacation_offers/${weekKey}/${offerId}/currentQueueIndex`).transaction(function(currentIndex) {
+                return (currentIndex || 0) + 1;
+            });
+            showToast("Вы отказались. Предложение переходит следующему.");
+        };
+
+        modal.style.display = 'flex';
+    }
+>>>>>>> REPLACE

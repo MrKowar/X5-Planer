@@ -257,6 +257,7 @@
     let slotLimitsData = {};
     let reportData = { deriglazova: false, gps: false, break: false };
     let globalUsersData = {}; // Глобальная переменная для всех данных пользователей
+    let fifthShiftHistoryData = {};
 
     let rainyDays = [];
     let profitableDays = {};
@@ -357,6 +358,7 @@
             if (data) {
                 currentUser.selectedDates = data.selectedDates || [];
                 currentUser.vacationDates = data.vacationDates || [];
+                currentUser.extraShiftsAllowed = data.extraShiftsAllowed || {};
             }
             renderCalendar();
         });
@@ -371,11 +373,15 @@
 
         db.ref('profitable_days').on('value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
 
+        db.ref('fifth_shift_history').on('value', snap => { fifthShiftHistoryData = snap.val() || {}; });
+
         db.ref('final_schedule').on('value', (snapshot) => {
             globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
             renderWeeklySchedule();
             if (!isAdmin) checkEveningReport(userKey);
         });
+
+        listenForVacationOffers();
     }
 
     function logout() { localStorage.removeItem('plannerFirst'); localStorage.removeItem('plannerLast'); location.reload(); }
@@ -438,14 +444,203 @@
 
         if (currentMode === 'shift') {
             if (vacIndex > -1) { currentUser.vacationDates.splice(vacIndex, 1); element.classList.remove('vacation'); }
-            if (shiftIndex > -1) { currentUser.selectedDates.splice(shiftIndex, 1); element.classList.remove('selected'); }
-            else { currentUser.selectedDates.push(dateStr); element.classList.add('selected'); }
+
+            if (shiftIndex > -1) {
+                currentUser.selectedDates.splice(shiftIndex, 1);
+                element.classList.remove('selected');
+            } else {
+                // Count how many shifts are already selected in this date's week
+                let targetWeek = getWeekKey(dateStr);
+                let shiftsInWeek = currentUser.selectedDates.filter(d => getWeekKey(d) === targetWeek).length;
+
+                // Extra shift limit logic for vacation overrides (handled later)
+                let extraShiftAllowed = (currentUser.extraShiftsAllowed && currentUser.extraShiftsAllowed[targetWeek]) ? currentUser.extraShiftsAllowed[targetWeek] : 0;
+                let maxAllowed = 4 + extraShiftAllowed;
+
+                let userKey = currentUser.firstName + "_" + currentUser.lastName;
+                if (fifthShiftHistoryData[targetWeek] === userKey) {
+                    maxAllowed += 1;
+                }
+
+                // Allow up to maxAllowed automatically. If they try to select a 5th (without extra slots), handle 5th shift logic.
+                if (shiftsInWeek >= maxAllowed) {
+                    handleFifthShiftRequest(dateStr, element);
+                    return; // Prevent normal toggle
+                }
+
+                currentUser.selectedDates.push(dateStr);
+                element.classList.add('selected');
+            }
         } else if (currentMode === 'vacation') {
             // Если включен режим отпуска, ставим или убираем отпуск пользователя
             if (shiftIndex > -1) { currentUser.selectedDates.splice(shiftIndex, 1); element.classList.remove('selected'); }
             if (vacIndex > -1) { currentUser.vacationDates.splice(vacIndex, 1); element.classList.remove('vacation'); }
             else { currentUser.vacationDates.push(dateStr); element.classList.add('vacation'); }
+            renderCalendar(); // Re-render to show/hide the stripe and update counts immediately
+
+            // Initiate vacation extra slots offer
+            if (vacIndex === -1) {
+                initiateVacationOffer(dateStr);
+            }
         }
+    }
+
+    function handleFifthShiftRequest(dateStr, element) {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let targetWeek = getWeekKey(dateStr);
+
+        // Calculate previous week key
+        let d = new Date(dateStr);
+        d.setDate(d.getDate() - 7);
+        let prevWeek = getWeekKey(d.toISOString().split('T')[0]);
+
+        db.ref('fifth_shift_history').once('value').then(snap => {
+            let history = snap.val() || {};
+            let thisWeekWinner = history[targetWeek];
+            let prevWeekWinner = history[prevWeek];
+
+            if (thisWeekWinner === userKey || prevWeekWinner === userKey) {
+                showToast("Вы уже брали 5-ю смену. Очередь переходит к другому сотруднику.");
+                return;
+            }
+
+            if (confirm("Вы выбираете 5-ю смену на этой неделе. Отправить запрос «Хочу 5 смен»?")) {
+                db.ref('fifth_shift_history/' + targetWeek).transaction(function(currentWinner) {
+                    if (currentWinner === null) {
+                        return userKey; // First to claim it
+                    } else if (currentWinner === userKey) {
+                        return currentWinner; // Already have it
+                    } else {
+                        // Someone else claimed it, abort
+                        return undefined;
+                    }
+                }, function(error, committed, snapshot) {
+                    if (error) {
+                        showToast("Ошибка при запросе 5-й смены.");
+                    } else if (!committed) {
+                        showToast("К сожалению, 5-я смена уже занята другим сотрудником.");
+                    } else {
+                        if (snapshot.val() === userKey) {
+                            showToast("Вам одобрена 5-я смена!");
+                            currentUser.selectedDates.push(dateStr);
+                            element.classList.add('selected');
+                            renderCalendar();
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function initiateVacationOffer(dateStr) {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let targetWeek = getWeekKey(dateStr);
+        let userName = currentUser.firstName;
+
+        let freedSlots = 1;
+        let offerId = userKey + "_" + dateStr;
+
+        // Create a deterministic queue of users who are NOT the one going on vacation
+        let queue = Object.keys(globalUsersData).filter(k => k !== userKey).sort();
+
+        db.ref(`vacation_offers/${targetWeek}/${offerId}`).once('value').then(snap => {
+            if (!snap.exists()) {
+                db.ref(`vacation_offers/${targetWeek}/${offerId}`).set({
+                    vacationUser: userKey,
+                    vacationUserName: userName,
+                    date: dateStr,
+                    slots: freedSlots,
+                    timestamp: Date.now(),
+                    queue: queue,
+                    currentQueueIndex: 0,
+                    status: 'open'
+                });
+                showToast("Отпуск отмечен. Коллегам предложены доп. смены.");
+            }
+        });
+    }
+
+    function listenForVacationOffers() {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+
+        db.ref('vacation_offers').on('value', snap => {
+            let offersByWeek = snap.val();
+            if (!offersByWeek) return;
+
+            // We use a flag to only show one modal at a time.
+            if (document.getElementById('vacationOfferModal') && document.getElementById('vacationOfferModal').style.display === 'flex') return;
+
+            for (let weekKey in offersByWeek) {
+                let offers = offersByWeek[weekKey];
+                for (let offerId in offers) {
+                    let offer = offers[offerId];
+
+                    // Only process open offers
+                    if (offer.status !== 'open') continue;
+                    // Ignore old offers (older than 24 hours) to prevent ancient spam
+                    if (Date.now() - offer.timestamp > 86400000) continue;
+
+                    // Sequential logic: Is it my turn?
+                    if (offer.queue && offer.queue.length > 0 && offer.currentQueueIndex < offer.queue.length) {
+                        if (offer.queue[offer.currentQueueIndex] === userKey) {
+                            showOfferPopup(weekKey, offerId, offer);
+                            return; // Only show one popup at a time
+                        }
+                    } else if (offer.queue && offer.currentQueueIndex >= offer.queue.length) {
+                        // Queue exhausted, close offer
+                        db.ref(`vacation_offers/${weekKey}/${offerId}/status`).set('exhausted');
+                    }
+                }
+            }
+        });
+    }
+
+    function showOfferPopup(weekKey, offerId, offer) {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+
+        let modal = document.getElementById('vacationOfferModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'vacationOfferModal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="text-align:center;">
+                    <div class="modal-title" style="color:var(--primary);">Доп. смена! 🎁</div>
+                    <p id="vacationOfferText" style="margin-bottom: 20px; color: #555;"></p>
+                    <div style="display:flex; gap:10px;">
+                        <button id="vacationOfferYesBtn" class="btn-success" style="flex:1;">Да, беру</button>
+                        <button id="vacationOfferNoBtn" class="btn-danger" style="flex:1;">Нет, спасибо</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        document.getElementById('vacationOfferText').innerText = `Сотрудник ${offer.vacationUserName} в отпуске на ${offer.date}. Вы можете взять на 1 смену больше. Будете брать?`;
+
+        document.getElementById('vacationOfferYesBtn').onclick = function() {
+            modal.style.display = 'none';
+            // Mark offer as closed since it was taken
+            db.ref(`vacation_offers/${weekKey}/${offerId}/status`).set('closed');
+
+            if (!currentUser.extraShiftsAllowed) currentUser.extraShiftsAllowed = {};
+            if (!currentUser.extraShiftsAllowed[weekKey]) currentUser.extraShiftsAllowed[weekKey] = 0;
+            currentUser.extraShiftsAllowed[weekKey] += 1;
+
+            showToast("Вам доступна 1 доп. смена на этой неделе. Выберите её в календаре.");
+            db.ref('users_schedules/' + userKey + '/extraShiftsAllowed').set(currentUser.extraShiftsAllowed);
+        };
+
+        document.getElementById('vacationOfferNoBtn').onclick = function() {
+            modal.style.display = 'none';
+            // Advance the queue
+            db.ref(`vacation_offers/${weekKey}/${offerId}/currentQueueIndex`).transaction(function(currentIndex) {
+                return (currentIndex || 0) + 1;
+            });
+            showToast("Вы отказались. Предложение переходит следующему.");
+        };
+
+        modal.style.display = 'flex';
     }
 
     function showVacationModal(dateStr, event) {
@@ -532,6 +727,7 @@
             lastName: currentUser.lastName,
             selectedDates: currentUser.selectedDates,
             vacationDates: currentUser.vacationDates,
+            extraShiftsAllowed: currentUser.extraShiftsAllowed || {},
             appVersion: appVer
         }).then(() => {
             let schedule = globalSchedule;
@@ -679,6 +875,7 @@
     }
 
     function getMonday(d) { d = new Date(d); let day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6:1); return new Date(d.setDate(diff)); }
+    function getWeekKey(dateStr) { let monday = getMonday(new Date(dateStr)); return `${monday.getFullYear()}-${(monday.getMonth()+1).toString().padStart(2, '0')}-${monday.getDate().toString().padStart(2, '0')}`; }
     function changeWeek(offset) { weekOffset += offset; renderWeeklySchedule(); }
 
     function renderWeeklySchedule() {
