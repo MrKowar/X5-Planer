@@ -105,6 +105,49 @@
     </div>
 </div>
 
+<!-- Модальные окна: Обучение, Обновления, Поддержка -->
+<div id="onboardingModal" class="modal-overlay" style="z-index:3000;">
+    <div class="modal-content">
+        <div class="modal-title" style="color:var(--primary);">Добро пожаловать! 👋</div>
+        <div style="font-size: 14px; line-height: 1.5; color: #444; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
+            <p>Это приложение-планировщик создано, чтобы вы могли сами выбирать удобные для себя смены.</p>
+            <p><b>Как это работает:</b></p>
+            <ul>
+                <li>В среднем вам доступно <b>4 смены в неделю</b>. Кликайте на пустые ячейки в календаре, чтобы занять их.</li>
+                <li>Если вы хотите <b>5-ю смену</b>, кликните на 5-й день. Программа проверит вашу историю и либо отдаст смену вам, либо передаст очередь коллегам.</li>
+            </ul>
+            <p><b>Легенда календаря:</b></p>
+            <ul>
+                <li><span style="display:inline-block; width:12px; height:12px; background:var(--primary); border-radius:3px;"></span> <b>Синий день:</b> Ваша выбранная смена.</li>
+                <li><span style="display:inline-block; width:12px; height:12px; background:var(--vacation); border-radius:3px;"></span> <b>Оранжевый день:</b> Ваш отпуск.</li>
+                <li><span style="display:inline-block; width:12px; height:3px; background:var(--vacation); vertical-align:middle;"></span> <b>Золотая полоска сверху:</b> Коллега в отпуске (нажмите, чтобы узнать кто).</li>
+                <li><span style="display:inline-block; width:12px; height:12px; background:var(--success); border-radius:3px;"></span> <b>Зеленый день:</b> Ожидается высокая прибыль (праздники и т.д.).</li>
+                <li><span style="border-bottom:3px solid var(--rain);">Голубая черта снизу:</span> Ожидается дождь ☔.</li>
+            </ul>
+            <p><b>Отпуска и доп. смены:</b><br>Если коллега уходит в отпуск, система предложит свободные слоты остальным в порядке очереди!</p>
+        </div>
+        <button class="btn-success" style="margin-top:16px;" onclick="closeOnboarding()">Понятно, начать работу!</button>
+    </div>
+</div>
+
+<div id="changelogModal" class="modal-overlay" style="z-index:3000;">
+    <div class="modal-content">
+        <div class="modal-title" style="color:var(--success);">Что нового? 🚀</div>
+        <div id="changelogContent" style="font-size: 14px; line-height: 1.5; color: #444; margin-bottom: 16px;"></div>
+        <button class="btn-primary" onclick="closeChangelog()">Отлично</button>
+    </div>
+</div>
+
+<div id="supportModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-title">Служба поддержки 🛠️</div>
+        <p style="font-size:14px; color:#666;">Опишите вашу проблему или пожелание:</p>
+        <textarea id="supportText" rows="4" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-family:inherit; resize:vertical;"></textarea>
+        <button class="btn-success" style="margin-top:10px;" onclick="submitSupportTicket()">Отправить</button>
+        <button class="btn-secondary" onclick="document.getElementById('supportModal').style.display='none'">Отмена</button>
+    </div>
+</div>
+
 <!-- Модальное окно отчета -->
 <div id="reportModal" class="modal-overlay">
     <div class="modal-content">
@@ -133,23 +176,36 @@
 </div>
 
 <!-- Окно логина -->
-<div id="authScreen" class="screen active card" style="justify-content: center; max-height: 400px; margin-top: 20vh;">
+<div id="authScreen" class="screen active card" style="justify-content: center; max-height: 500px; margin-top: 20vh; overflow-y: auto;">
     <h2 style="margin-top:0; text-align: center;">Вход в систему</h2>
     <input type="text" id="firstName" placeholder="Имя (например, Никита)">
     <input type="text" id="lastName" placeholder="Фамилия">
-    <button onclick="attemptLogin()">Войти</button>
+    <input type="password" id="pinCode" placeholder="PIN-код (4 цифры)" maxlength="4" style="text-align:center; font-size: 20px; letter-spacing: 5px;" pattern="[0-9]*" inputmode="numeric">
+
+    <div id="polygonSelection" style="display:none; margin-top: 10px;">
+        <label style="font-size: 14px; font-weight: bold; color: #555;">Выберите ваш полигон (только при регистрации):</label>
+        <select id="polygonSelect" style="width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px;">
+            <option value="">-- Выберите полигон --</option>
+        </select>
+    </div>
+
+    <button onclick="attemptLogin()">Войти / Зарегистрироваться</button>
 </div>
 
 <div id="mainScreen" class="screen">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h2 id="greetingTitle" style="margin:0;"></h2>
-        <span onclick="logout()" style="color:var(--danger); font-size:14px; font-weight:bold; cursor:pointer;">Выйти ↪</span>
+        <div>
+            <span onclick="document.getElementById('supportModal').style.display='flex'" style="color:var(--primary); font-size:14px; font-weight:bold; cursor:pointer; margin-right:12px;">Поддержка 💬</span>
+            <span onclick="logout()" style="color:var(--danger); font-size:14px; font-weight:bold; cursor:pointer;">Выйти ↪</span>
+        </div>
     </div>
 
     <div class="tabs">
         <button id="tabPersonal" class="active" onclick="switchTab('personal')">Мои заявки</button>
         <button id="tabGeneral" class="btn-secondary" onclick="switchTab('general')">Общая доска</button>
         <button id="tabVacations" class="btn-secondary" onclick="switchTab('vacations')">Отпуски</button>
+        <button id="tabVoting" class="btn-secondary" onclick="switchTab('voting')" style="display:none;">Голосование</button>
         <button id="tabEmployees" class="btn-secondary" onclick="switchTab('employees')" style="display:none;">Сотрудники</button>
         <button id="tabReports" class="btn-secondary" onclick="switchTab('reports')" style="display:none;">Отчеты</button>
         <button id="tabAnalytics" class="btn-secondary" onclick="switchTab('analytics')" style="display:none;">Аналитика 🤖</button>
@@ -197,6 +253,18 @@
             <h3 style="margin-top:0; color: var(--vacation);">Запланированные отпуска</h3>
             <div id="allVacationsList" style="margin-top: 16px;">
                 <p style="text-align: center; color: #888;">Загрузка...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="votingTab" style="display: none;">
+        <div class="card">
+            <h3 style="margin-top:0; color: var(--primary);">Выбор Администратора 🗳️</h3>
+            <div id="votingStatus" style="font-size: 14px; margin-bottom: 12px; color: #555;">Ожидание...</div>
+            <div id="votingList"></div>
+            <div id="tieBreakerSection" style="display:none; margin-top: 16px; border-top: 1px dashed #ccc; padding-top: 12px;">
+                <h4 style="color:var(--danger); margin-top:0;">Разрешение ничьей (Гранд-Админ)</h4>
+                <div id="tieBreakerCandidates"></div>
             </div>
         </div>
     </div>
@@ -259,11 +327,55 @@
     let globalUsersData = {}; // Глобальная переменная для всех данных пользователей
     let fifthShiftHistoryData = {};
 
+    // Tracking active listeners for cleanup
+    let activeListeners = [];
+    function attachListener(refPath, eventType, callback) {
+        let ref = db.ref(refPath);
+        ref.on(eventType, callback);
+        activeListeners.push({ ref: ref, eventType: eventType, callback: callback });
+    }
+    function detachAllListeners() {
+        activeListeners.forEach(listener => {
+            listener.ref.off(listener.eventType, listener.callback);
+        });
+        activeListeners = [];
+    }
+
     let rainyDays = [];
     let profitableDays = {};
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+    const APP_VERSION = 2; // Incremented for changelog logic
+
+    const POLYGONS = [
+        "Курск - Карла Маркса",
+        "Курск, ул. Победы, д. 74А",
+        "Курск - Анатолия Дериглазова",
+        "Курск - Поповский лес",
+        "Курск - Центральный округ",
+        "Курск - Железнодорожный округ",
+        "Курск - Садовая",
+        "Курск - пр-кт Вячеслава Клыкова/Конорева",
+        "Курск - Интернациональная",
+        "Курск - Черняховского",
+        "Курск - Менделеева",
+        "Курск - Магистральный проезд",
+        "Курская область - Курчатов",
+        "Курская область - Щигры",
+        "Курская область - Суджа",
+        "Курск - пос. Маршала Жукова",
+        "Курск - Северо-Западный район",
+        "Курск - Тропинка"
+    ];
 
     window.onload = function() {
+        // Populate polygon select
+        let polySelect = document.getElementById('polygonSelect');
+        POLYGONS.forEach(p => {
+            let opt = document.createElement('option');
+            opt.value = p; opt.innerText = p;
+            polySelect.appendChild(opt);
+        });
+
         fetchWeather();
         let savedFirst = localStorage.getItem('plannerFirst');
         let savedLast = localStorage.getItem('plannerLast');
@@ -299,24 +411,83 @@
     }
 
     function attemptLogin() {
-        const fName = document.getElementById('firstName').value.trim();
-        const lName = document.getElementById('lastName').value.trim();
+        let fName = document.getElementById('firstName').value.trim();
+        let lName = document.getElementById('lastName').value.trim();
+        let pin = document.getElementById('pinCode').value.trim();
+
+        // Fix for specific user
+        if (fName.toLowerCase() === 'хуямир' && lName.toLowerCase() === 'филимонов') {
+            fName = 'Владимир';
+        }
+
         if(!fName || !lName) { showToast("Введите имя и фамилию"); return; }
         if (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко') {
-            login(); return;
+            login(fName, lName, "Курск - Карла Маркса", 'superadmin'); return;
         }
+        if (pin.length !== 4) { showToast("Введите 4-значный PIN-код"); return; }
+
         const userKey = fName + "_" + lName;
         db.ref('users_schedules/' + userKey).once('value').then(snap => {
-            if (snap.exists() && !localStorage.getItem('plannerFirst')) showToast("Этот пользователь уже зарегистрирован.");
-            else login();
-        }).catch(err => login());
+            if (snap.exists()) {
+                let uData = snap.val();
+                if (uData.pin && uData.pin !== pin) {
+                    showToast("Неверный PIN-код!");
+                    return;
+                }
+
+                // Existing user without PIN (migration) gets this PIN set
+                if (!uData.pin) {
+                    db.ref('users_schedules/' + userKey + '/pin').set(pin);
+                }
+
+                // Existing user without polygon (migration) defaults to Карла Маркса
+                let userPoly = uData.polygon || "Курск - Карла Маркса";
+                login(fName, lName, userPoly, uData.role || 'user');
+            } else {
+                // New user registration flow
+                let polySelect = document.getElementById('polygonSelection');
+                let selectedPoly = document.getElementById('polygonSelect').value;
+
+                if (polySelect.style.display === 'none') {
+                    // Show polygon selection for new user
+                    polySelect.style.display = 'block';
+                    showToast("Пожалуйста, выберите свой полигон для регистрации.");
+                    return;
+                }
+
+                if (!selectedPoly) {
+                    showToast("Выберите полигон из списка!");
+                    return;
+                }
+
+                // Register new user
+                db.ref('users_schedules/' + userKey).set({
+                    firstName: fName,
+                    lastName: lName,
+                    pin: pin,
+                    polygon: selectedPoly,
+                    role: 'user',
+                    selectedDates: [],
+                    vacationDates: []
+                }).then(() => {
+                    login(fName, lName, selectedPoly, 'user');
+                });
+            }
+        }).catch(err => {
+            console.error(err);
+            showToast("Ошибка сети");
+        });
     }
 
-    function login() {
-        const fName = document.getElementById('firstName').value.trim();
-        const lName = document.getElementById('lastName').value.trim();
+    function login(fName, lName, polygon, role) {
+        detachAllListeners(); // Clean up listeners if switching context
+
         currentUser.firstName = fName; currentUser.lastName = lName;
-        localStorage.setItem('plannerFirst', fName); localStorage.setItem('plannerLast', lName);
+        currentUser.polygon = polygon;
+        currentUser.role = role;
+
+        localStorage.setItem('plannerFirst', fName);
+        localStorage.setItem('plannerLast', lName);
 
         // --- Получаем версию приложения из Android Studio ---
         let appVer = 'Старое/Веб';
@@ -327,12 +498,66 @@
         document.getElementById('authScreen').classList.remove('active');
         document.getElementById('mainScreen').classList.add('active');
 
-        if (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко') {
-            isAdmin = true;
+        isAdmin = (role === 'admin' || role === 'superadmin');
+
+        if (role === 'superadmin') {
             document.getElementById('greetingTitle').innerHTML = '👑 ' + fName;
+
+            // Add superadmin polygon selector if not exists
+            if (!document.getElementById('superAdminPolygonSelect')) {
+                let headerDiv = document.getElementById('greetingTitle').parentElement;
+                let polySelect = document.createElement('select');
+                polySelect.id = 'superAdminPolygonSelect';
+                polySelect.style.marginRight = '10px';
+                polySelect.style.padding = '4px 8px';
+                polySelect.style.borderRadius = '4px';
+
+                POLYGONS.forEach(p => {
+                    let opt = document.createElement('option');
+                    opt.value = p; opt.innerText = p;
+                    polySelect.appendChild(opt);
+                });
+                polySelect.value = currentUser.polygon;
+
+                polySelect.onchange = function() {
+                    currentUser.polygon = this.value;
+                    showToast("Полигон изменен на: " + this.value);
+                    // Reload data for new polygon
+                    login(fName, lName, this.value, 'superadmin');
+                };
+
+                headerDiv.insertBefore(polySelect, headerDiv.lastElementChild);
+            }
+        } else {
+            document.getElementById('greetingTitle').innerText = fName + " (" + currentUser.polygon.split(',')[0].split('-')[0].trim() + ")";
+        }
+
+        // Voting Tab Logic
+        document.getElementById('tabVoting').style.display = 'block';
+        initVotingLogic();
+
+        if (isAdmin) {
             document.getElementById('tabEmployees').style.display = 'block';
             document.getElementById('tabReports').style.display = 'block';
             document.getElementById('tabAnalytics').style.display = 'block';
+
+            if (role === 'superadmin') {
+                if (!document.getElementById('tabSupportAdmin')) {
+                    let btn = document.createElement('button');
+                    btn.id = 'tabSupportAdmin';
+                    btn.className = 'btn-secondary';
+                    btn.innerText = 'Тикеты 🛠️';
+                    btn.onclick = () => switchTab('supportAdmin');
+                    document.querySelector('.tabs').appendChild(btn);
+
+                    let tabDiv = document.createElement('div');
+                    tabDiv.id = 'supportAdminTab';
+                    tabDiv.style.display = 'none';
+                    tabDiv.innerHTML = `<div class="card"><h3 style="margin-top:0;">Обращения в поддержку</h3><div id="supportTicketsList">Загрузка...</div></div>`;
+                    document.getElementById('mainScreen').appendChild(tabDiv);
+                }
+                loadSupportTickets();
+            }
 
             let modeSelector = document.getElementById('modeSelector');
             if (!document.getElementById('adminModeLabel')) {
@@ -344,8 +569,6 @@
             }
             document.getElementById('adminReportDate').value = getTodayDateStr();
             loadAdminReports();
-        } else {
-            document.getElementById('greetingTitle').innerText = fName;
         }
 
         const userKey = fName + "_" + lName;
@@ -364,18 +587,21 @@
         });
 
         // Слушатель всех сотрудников (для вкладки Сотрудники и для модального окна отпусков)
-        db.ref('users_schedules').on('value', snap => {
+        attachListener('users_schedules', 'value', snap => {
             globalUsersData = snap.val() || {};
             if (isAdmin) loadEmployees();
         });
 
-        db.ref('slot_limits').on('value', snap => { slotLimitsData = snap.val() || {}; renderCalendar(); renderWeeklySchedule(); });
+        checkOnboardingAndChangelog(role);
 
-        db.ref('profitable_days').on('value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
+        let poly = currentUser.polygon;
+        attachListener(`polygons/${poly}/slot_limits`, 'value', snap => { slotLimitsData = snap.val() || {}; renderCalendar(); renderWeeklySchedule(); });
 
-        db.ref('fifth_shift_history').on('value', snap => { fifthShiftHistoryData = snap.val() || {}; });
+        attachListener(`polygons/${poly}/profitable_days`, 'value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
 
-        db.ref('final_schedule').on('value', (snapshot) => {
+        attachListener(`polygons/${poly}/fifth_shift_history`, 'value', snap => { fifthShiftHistoryData = snap.val() || {}; });
+
+        attachListener(`polygons/${poly}/final_schedule`, 'value', (snapshot) => {
             globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
             renderWeeklySchedule();
             if (!isAdmin) checkEveningReport(userKey);
@@ -384,10 +610,100 @@
         listenForVacationOffers();
     }
 
+    function checkOnboardingAndChangelog(role) {
+        let hasSeenOnboarding = localStorage.getItem('onboardingSeen_v1');
+        let lastSeenVersion = parseInt(localStorage.getItem('lastVersionSeen') || "0");
+
+        if (!hasSeenOnboarding) {
+            if (role === 'admin' || role === 'superadmin') {
+                let obText = document.getElementById('onboardingModal').querySelector('div[style*="font-size: 14px"]');
+                let adminHtml = `
+                    <p style="color:var(--danger);"><b>Панель Администратора:</b></p>
+                    <ul style="color:var(--danger);">
+                        <li>У вас есть новые вкладки: Сотрудники, Отчеты, Аналитика.</li>
+                        <li>Во вкладке "Мои заявки" переключите режим на "Места 👑", чтобы менять лимит слотов на каждый день (нажмите на ячейку).</li>
+                        <li>В общей доске вы можете удалять сотрудников со смен при необходимости.</li>
+                    </ul>
+                `;
+                obText.innerHTML += adminHtml;
+            }
+            document.getElementById('onboardingModal').style.display = 'flex';
+        } else if (lastSeenVersion < APP_VERSION) {
+            let cl = document.getElementById('changelogContent');
+            if (role === 'superadmin' || role === 'admin') {
+                cl.innerHTML = `<ul>
+                    <li><b>Новые Полигоны:</b> Добавлена система мульти-полигонов и авто-привязка при регистрации.</li>
+                    <li><b>Гранд-Админ:</b> Глобальный переключатель полигонов для Александра.</li>
+                    <li><b>Голосование:</b> Автоматические выборы локальных админов по полигонам.</li>
+                    <li><b>Обучение:</b> Добавлены интерактивные подсказки для новых курьеров.</li>
+                </ul>`;
+            } else {
+                cl.innerHTML = `<ul>
+                    <li><b>Голосование:</b> Выбирайте старшего на своем полигоне! Таймер 3 часа.</li>
+                    <li><b>Новый PIN:</b> Восстановление аккаунта теперь безопасно по 4-значному PIN-коду.</li>
+                    <li><b>Поддержка:</b> Появилась кнопка связи с администрацией.</li>
+                    <li><b>Обучение:</b> Добавлена легенда и подсказки по работе со сменами.</li>
+                </ul>`;
+            }
+            document.getElementById('changelogModal').style.display = 'flex';
+        }
+    }
+
+    window.closeOnboarding = function() {
+        localStorage.setItem('onboardingSeen_v1', 'true');
+        document.getElementById('onboardingModal').style.display = 'none';
+        checkOnboardingAndChangelog(currentUser.role);
+    };
+
+    window.closeChangelog = function() {
+        localStorage.setItem('lastVersionSeen', APP_VERSION);
+        document.getElementById('changelogModal').style.display = 'none';
+    };
+
+    window.submitSupportTicket = function() {
+        let text = document.getElementById('supportText').value.trim();
+        if (!text) return;
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        db.ref('support_tickets').push({
+            userKey: userKey,
+            name: currentUser.firstName + " " + currentUser.lastName,
+            polygon: currentUser.polygon,
+            message: text,
+            timestamp: Date.now()
+        }).then(() => {
+            showToast("Обращение отправлено!");
+            document.getElementById('supportText').value = "";
+            document.getElementById('supportModal').style.display = 'none';
+        });
+    };
+
+    function loadSupportTickets() {
+        db.ref('support_tickets').on('value', snap => {
+            let data = snap.val();
+            let container = document.getElementById('supportTicketsList');
+            if (!container) return;
+            if (!data) { container.innerHTML = "<p>Нет обращений.</p>"; return; }
+
+            let html = "";
+            let keys = Object.keys(data).sort((a,b) => data[b].timestamp - data[a].timestamp);
+            keys.forEach(k => {
+                let t = data[k];
+                let date = new Date(t.timestamp).toLocaleString('ru-RU');
+                html += `<div style="background:#f9f9f9; padding:12px; margin-bottom:8px; border-left:3px solid var(--danger); border-radius:4px;">
+                    <div style="font-size:12px; color:#888;">${date} - <b>${t.name}</b> (${t.polygon.split(',')[0]})</div>
+                    <div style="margin-top:6px; font-size:14px;">${t.message}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        });
+    }
+
     function logout() { localStorage.removeItem('plannerFirst'); localStorage.removeItem('plannerLast'); location.reload(); }
 
     function switchTab(tab) {
-        ['personalTab', 'generalTab', 'vacationsTab', 'employeesTab', 'reportsTab', 'analyticsTab'].forEach(t => document.getElementById(t).style.display = 'none');
+        let tabs = ['personalTab', 'generalTab', 'vacationsTab', 'votingTab', 'employeesTab', 'reportsTab', 'analyticsTab'];
+        if (document.getElementById('supportAdminTab')) tabs.push('supportAdminTab');
+        tabs.forEach(t => { if(document.getElementById(t)) document.getElementById(t).style.display = 'none'; });
         document.getElementById(tab + 'Tab').style.display = 'block';
 
         document.querySelectorAll('.tabs button').forEach(btn => btn.className = 'btn-secondary');
@@ -430,7 +746,7 @@
             if (newLimit !== null && newLimit.trim() !== "") {
                 let parsed = parseInt(newLimit);
                 if (!isNaN(parsed) && parsed >= 0) {
-                    db.ref('slot_limits/' + dateStr).set(parsed).then(() => {
+                    db.ref(`polygons/${currentUser.polygon}/slot_limits/` + dateStr).set(parsed).then(() => {
                         setTimeout(() => processQueueAndSave(dateStr, null), 1000);
                     });
                     showToast(`Лимит изменен на ${parsed}`);
@@ -494,7 +810,7 @@
         d.setDate(d.getDate() - 7);
         let prevWeek = getWeekKey(d.toISOString().split('T')[0]);
 
-        db.ref('fifth_shift_history').once('value').then(snap => {
+        db.ref(`polygons/${currentUser.polygon}/fifth_shift_history`).once('value').then(snap => {
             let history = snap.val() || {};
             let thisWeekWinner = history[targetWeek];
             let prevWeekWinner = history[prevWeek];
@@ -505,7 +821,7 @@
             }
 
             if (confirm("Вы выбираете 5-ю смену на этой неделе. Отправить запрос «Хочу 5 смен»?")) {
-                db.ref('fifth_shift_history/' + targetWeek).transaction(function(currentWinner) {
+                db.ref(`polygons/${currentUser.polygon}/fifth_shift_history/` + targetWeek).transaction(function(currentWinner) {
                     if (currentWinner === null) {
                         return userKey; // First to claim it
                     } else if (currentWinner === userKey) {
@@ -540,12 +856,12 @@
         let freedSlots = 1;
         let offerId = userKey + "_" + dateStr;
 
-        // Create a deterministic queue of users who are NOT the one going on vacation
-        let queue = Object.keys(globalUsersData).filter(k => k !== userKey).sort();
+        // Create a deterministic queue of users who are NOT the one going on vacation AND are in the same polygon
+        let queue = Object.keys(globalUsersData).filter(k => k !== userKey && globalUsersData[k].polygon === currentUser.polygon).sort();
 
-        db.ref(`vacation_offers/${targetWeek}/${offerId}`).once('value').then(snap => {
+        db.ref(`polygons/${currentUser.polygon}/vacation_offers/${targetWeek}/${offerId}`).once('value').then(snap => {
             if (!snap.exists()) {
-                db.ref(`vacation_offers/${targetWeek}/${offerId}`).set({
+                db.ref(`polygons/${currentUser.polygon}/vacation_offers/${targetWeek}/${offerId}`).set({
                     vacationUser: userKey,
                     vacationUserName: userName,
                     date: dateStr,
@@ -563,7 +879,7 @@
     function listenForVacationOffers() {
         let userKey = currentUser.firstName + "_" + currentUser.lastName;
 
-        db.ref('vacation_offers').on('value', snap => {
+        attachListener(`polygons/${currentUser.polygon}/vacation_offers`, 'value', snap => {
             let offersByWeek = snap.val();
             if (!offersByWeek) return;
 
@@ -588,7 +904,7 @@
                         }
                     } else if (offer.queue && offer.currentQueueIndex >= offer.queue.length) {
                         // Queue exhausted, close offer
-                        db.ref(`vacation_offers/${weekKey}/${offerId}/status`).set('exhausted');
+                        db.ref(`polygons/${currentUser.polygon}/vacation_offers/${weekKey}/${offerId}/status`).set('exhausted');
                     }
                 }
             }
@@ -621,7 +937,7 @@
         document.getElementById('vacationOfferYesBtn').onclick = function() {
             modal.style.display = 'none';
             // Mark offer as closed since it was taken
-            db.ref(`vacation_offers/${weekKey}/${offerId}/status`).set('closed');
+            db.ref(`polygons/${currentUser.polygon}/vacation_offers/${weekKey}/${offerId}/status`).set('closed');
 
             if (!currentUser.extraShiftsAllowed) currentUser.extraShiftsAllowed = {};
             if (!currentUser.extraShiftsAllowed[weekKey]) currentUser.extraShiftsAllowed[weekKey] = 0;
@@ -634,7 +950,7 @@
         document.getElementById('vacationOfferNoBtn').onclick = function() {
             modal.style.display = 'none';
             // Advance the queue
-            db.ref(`vacation_offers/${weekKey}/${offerId}/currentQueueIndex`).transaction(function(currentIndex) {
+            db.ref(`polygons/${currentUser.polygon}/vacation_offers/${weekKey}/${offerId}/currentQueueIndex`).transaction(function(currentIndex) {
                 return (currentIndex || 0) + 1;
             });
             showToast("Вы отказались. Предложение переходит следующему.");
@@ -720,6 +1036,7 @@
 
     function saveData() {
         const userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let poly = currentUser.polygon;
         let appVer = window.AndroidApp ? 'v' + window.AndroidApp.getAppVersion() : 'Старое/Веб';
 
         db.ref('users_schedules/' + userKey).update({
@@ -770,7 +1087,7 @@
                 }
             }
 
-            db.ref('final_schedule').set(schedule).then(() => { showToast("✅ Заявки сохранены!"); switchTab('general'); });
+            db.ref(`polygons/${poly}/final_schedule`).set(schedule).then(() => { showToast("✅ Заявки сохранены!"); switchTab('general'); });
         }).catch(error => showToast("❌ Ошибка: " + error.message));
     }
 
@@ -778,12 +1095,13 @@
 
     function checkEveningReport(userKey) {
         let todayStr = getTodayDateStr();
+        let poly = currentUser.polygon;
         let d = new Date();
         let moscowTime = new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + (3600000 * 3));
         if (moscowTime.getHours() >= 21) {
             let approvedWorkers = (globalSchedule.approved && globalSchedule.approved[todayStr]) ? globalSchedule.approved[todayStr] : [];
             if (approvedWorkers.includes(userKey)) {
-                db.ref(`daily_reports/${todayStr}/${userKey}`).once('value').then(snap => { if (!snap.exists()) document.getElementById('reportModal').style.display = 'flex'; });
+                db.ref(`polygons/${poly}/daily_reports/${todayStr}/${userKey}`).once('value').then(snap => { if (!snap.exists()) document.getElementById('reportModal').style.display = 'flex'; });
             }
         }
     }
@@ -798,15 +1116,17 @@
 
     function submitReport(isNoComment) {
         const userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let poly = currentUser.polygon;
         let payload = isNoComment ? { status: 'no_comment', timestamp: Date.now() } : { status: 'completed', orders: parseInt(document.getElementById('repOrders').value || "0"), deriglazova: reportData.deriglazova, gps: reportData.gps, break: reportData.break, timestamp: Date.now() };
-        db.ref(`daily_reports/${getTodayDateStr()}/${userKey}`).set(payload).then(() => { document.getElementById('reportModal').style.display = 'none'; showToast(isNoComment ? "Отчет пропущен" : "Спасибо! Отчет отправлен."); });
+        db.ref(`polygons/${poly}/daily_reports/${getTodayDateStr()}/${userKey}`).set(payload).then(() => { document.getElementById('reportModal').style.display = 'none'; showToast(isNoComment ? "Отчет пропущен" : "Спасибо! Отчет отправлен."); });
     }
 
     function runAIAnalysis() {
         let results = document.getElementById('aiResults');
+        let poly = currentUser.polygon;
         results.innerHTML = '<p style="color:#666;">⏳ Собираю и анализирую данные...</p>';
 
-        db.ref('daily_reports').once('value').then(snap => {
+        db.ref(`polygons/${poly}/daily_reports`).once('value').then(snap => {
             let data = snap.val();
             if (!data) { results.innerHTML = '<p style="color:#d32f2f;">Недостаточно данных для ИИ-анализа.</p>'; return; }
 
@@ -850,7 +1170,8 @@
     }
 
     function approveForecast(dateStr, reason) {
-        db.ref('profitable_days/' + dateStr).set(reason);
+        let poly = currentUser.polygon;
+        db.ref(`polygons/${poly}/profitable_days/` + dateStr).set(reason);
         showToast('✅ Прогноз утвержден и разослан курьерам!');
     }
 
@@ -868,10 +1189,160 @@
         for (let d in profitableDays) {
             html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f5f5f5; padding:10px; margin-bottom:6px; border-radius:6px; border-left:3px solid var(--success);">
                         <div style="font-size:13px;"><b>${d}</b><br>${profitableDays[d]}</div>
-                        <button class="btn-danger" style="width:auto; padding:6px 12px; margin:0;" onclick="db.ref('profitable_days/${d}').remove()">✕</button>
+                        <button class="btn-danger" style="width:auto; padding:6px 12px; margin:0;" onclick="db.ref('polygons/${currentUser.polygon}/profitable_days/${d}').remove()">✕</button>
                      </div>`;
         }
         container.innerHTML = html || '<p style="color:#888;">Нет активных зеленых дней.</p>';
+    }
+
+    let votingRef = null;
+    function initVotingLogic() {
+        let poly = currentUser.polygon;
+        votingRef = db.ref('polygon_votes/' + poly);
+
+        votingRef.on('value', snap => {
+            let data = snap.val();
+            let container = document.getElementById('votingList');
+            let status = document.getElementById('votingStatus');
+
+            // Check users in this polygon
+            let usersInPoly = Object.values(globalUsersData).filter(u => u.polygon === poly && u.role !== 'superadmin');
+
+            if (usersInPoly.length < 2) {
+                status.innerText = "Для старта голосования нужно минимум 2 сотрудника на полигоне.";
+                container.innerHTML = "";
+                return;
+            }
+
+            if (!data) data = { votes: {}, startTime: null, resolved: false, candidates: {} };
+
+            // Sync candidates
+            usersInPoly.forEach(u => {
+                let k = u.firstName + "_" + u.lastName;
+                if (!data.candidates[k]) {
+                    data.candidates[k] = { name: u.firstName + " " + u.lastName, votes: 0 };
+                }
+            });
+
+            // Calculate total votes
+            let totalVotes = Object.values(data.votes || {}).length;
+
+            if (data.resolved === true) {
+                status.innerText = "Голосование завершено. Администратор выбран.";
+                container.innerHTML = `<div class="card" style="border-left: 4px solid var(--success);"><b>Текущий админ полигона:</b> ${data.adminName || "Неизвестно"}</div>`;
+                document.getElementById('tieBreakerSection').style.display = 'none';
+                return;
+            }
+
+            if (data.resolved === 'tie_pending') {
+                status.innerText = "Равенство голосов. Ожидается решение Гранд-Админа.";
+                container.innerHTML = "";
+                if (currentUser.role === 'superadmin') {
+                    let tbSection = document.getElementById('tieBreakerSection');
+                    let tbList = document.getElementById('tieBreakerCandidates');
+                    tbSection.style.display = 'block';
+                    let tbHtml = '';
+                    (data.tiedCandidates || []).forEach(cand => {
+                        tbHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding: 12px; background: #fff3e0; margin-bottom:8px; border-radius: 8px;">
+                            <div><b>${cand.name}</b></div>
+                            <button class="btn-success" style="width: auto; padding: 8px 16px; margin: 0;" onclick="resolveTieBreaker('${poly}', '${cand.key}', '${cand.name}')">Назначить</button>
+                         </div>`;
+                    });
+                    tbList.innerHTML = tbHtml;
+                } else {
+                    document.getElementById('tieBreakerSection').style.display = 'none';
+                }
+                return;
+            } else {
+                document.getElementById('tieBreakerSection').style.display = 'none';
+            }
+
+            if (totalVotes >= 4 && !data.startTime) {
+                // Start timer
+                votingRef.update({ startTime: Date.now() });
+                data.startTime = Date.now();
+            }
+
+            let html = "";
+            if (data.startTime) {
+                let timeLeft = 3 * 60 * 60 * 1000 - (Date.now() - data.startTime);
+                if (timeLeft <= 0) {
+                    status.innerText = "Подведение итогов...";
+                    resolveVoting(poly, data);
+                    return;
+                } else {
+                    let hrs = Math.floor(timeLeft / (1000 * 60 * 60));
+                    let mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    status.innerText = `Голосование идет. До завершения: ${hrs}ч ${mins}м. Отдано голосов: ${totalVotes}`;
+                }
+            } else {
+                status.innerText = `Ожидание активности. Голосов: ${totalVotes}/4 для старта таймера (3 часа).`;
+            }
+
+            let myVote = (data.votes || {})[currentUser.firstName + "_" + currentUser.lastName];
+
+            for (let candKey in data.candidates) {
+                let cand = data.candidates[candKey];
+                let isMyVote = myVote === candKey;
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; padding: 12px; background: #f9f9f9; margin-bottom:8px; border-radius: 8px;">
+                            <div><b>${cand.name}</b> <span style="color:#888; font-size: 12px;">(Голосов: ${cand.votes})</span></div>
+                            <button class="${isMyVote ? 'btn-success' : 'btn-secondary'}" style="width: auto; padding: 8px 16px; margin: 0;" onclick="castVote('${poly}', '${candKey}')">${isMyVote ? 'Ваш выбор' : 'Голосовать'}</button>
+                         </div>`;
+            }
+
+            container.innerHTML = html;
+        });
+    }
+
+    window.resolveTieBreaker = function(poly, winnerKey, winnerName) {
+        if (currentUser.role !== 'superadmin') return;
+        db.ref(`users_schedules/${winnerKey}/role`).set('admin');
+        db.ref(`polygon_votes/${poly}`).update({ resolved: true, adminKey: winnerKey, adminName: winnerName });
+        showToast("Ничья разрешена! Администратор назначен.");
+    };
+
+    window.castVote = function(poly, candidateKey) {
+        let myKey = currentUser.firstName + "_" + currentUser.lastName;
+        db.ref(`polygon_votes/${poly}/votes/${myKey}`).set(candidateKey).then(() => {
+            // Recalculate candidate totals
+            db.ref(`polygon_votes/${poly}`).once('value').then(snap => {
+                let data = snap.val();
+                let counts = {};
+                for (let k in data.votes) {
+                    let v = data.votes[k];
+                    counts[v] = (counts[v] || 0) + 1;
+                }
+                for (let c in data.candidates) {
+                    db.ref(`polygon_votes/${poly}/candidates/${c}/votes`).set(counts[c] || 0);
+                }
+            });
+        });
+    };
+
+    function resolveVoting(poly, data) {
+        let maxVotes = -1;
+        let winners = [];
+        for (let c in data.candidates) {
+            let v = data.candidates[c].votes || 0;
+            if (v > maxVotes) {
+                maxVotes = v;
+                winners = [{key: c, name: data.candidates[c].name}];
+            } else if (v === maxVotes) {
+                winners.push({key: c, name: data.candidates[c].name});
+            }
+        }
+
+        if (winners.length === 1) {
+            // Make them admin
+            let w = winners[0];
+            db.ref(`users_schedules/${w.key}/role`).set('admin');
+            votingRef.update({ resolved: true, adminKey: w.key, adminName: w.name });
+            showToast("Выбран новый администратор полигона!");
+        } else {
+            // Tie -> Superadmin
+            votingRef.update({ resolved: 'tie_pending', tiedCandidates: winners });
+            document.getElementById('votingStatus').innerText = "Равенство голосов. Решение передано Гранд-Админу.";
+        }
     }
 
     function getMonday(d) { d = new Date(d); let day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6:1); return new Date(d.setDate(diff)); }
@@ -928,8 +1399,8 @@
             approved.push(unplanned.shift());
         }
 
-        db.ref(`final_schedule/approved/${dateStr}`).set(approved);
-        db.ref(`final_schedule/unplanned/${dateStr}`).set(unplanned);
+        db.ref(`polygons/${currentUser.polygon}/final_schedule/approved/${dateStr}`).set(approved);
+        db.ref(`polygons/${currentUser.polygon}/final_schedule/unplanned/${dateStr}`).set(unplanned);
     }
 
     window.cancelShift = function(dateStr, workerKey) {
@@ -952,27 +1423,47 @@
         let html = '';
         for (let key in globalUsersData) {
             let emp = globalUsersData[key];
+            if (emp.role === 'superadmin') continue; // Hide superadmin from list
+
+            // Only show employees in current polygon for standard admin, superadmin sees all or polygon specific?
+            // Superadmin sees polygon specific to match context
+            if (emp.polygon !== currentUser.polygon) continue;
+
             let ver = emp.appVersion || 'Старое/Веб';
 
             // Если версия старая или неизвестная - красным, если новая (считалась с Android) - зеленым
             let verColor = (ver === 'Старое/Веб') ? 'var(--danger)' : 'var(--success)';
 
+            let roleBtn = '';
+            if (currentUser.role === 'superadmin') {
+                if (emp.role === 'admin') {
+                    roleBtn = `<button class="btn-danger btn-nav" style="margin-right:5px; background:var(--secondary); color:black;" onclick="db.ref('users_schedules/${key}/role').set('user')">Снять Админа</button>`;
+                } else {
+                    roleBtn = `<button class="btn-nav" style="margin-right:5px; background:var(--accent);" onclick="db.ref('users_schedules/${key}/role').set('admin')">Дать Админа</button>`;
+                }
+            }
+
             html += `<div class="card" style="padding: 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <div>
-                            <b>${emp.firstName} ${emp.lastName}</b><br>
+                            <b>${emp.firstName} ${emp.lastName}</b> ${emp.role === 'admin' ? '⭐ (Админ)' : ''}<br>
                             <span style="font-size:12px; color:${verColor}; font-weight:bold;">📱 Версия: ${ver}</span>
                         </div>
-                        <button class="btn-danger btn-nav" onclick="db.ref('users_schedules/${key}').remove()">Удалить</button>
+                        <div>
+                            ${roleBtn}
+                            <button class="btn-danger btn-nav" onclick="if(confirm('Точно удалить?')) db.ref('users_schedules/${key}').remove()">Удалить</button>
+                        </div>
                      </div>`;
         }
+        if (!html) html = '<p>Сотрудники на этом полигоне не найдены.</p>';
         container.innerHTML = html;
     }
 
     function loadAdminReports() {
         if (!isAdmin) return;
+        let poly = currentUser.polygon;
         let d = document.getElementById('adminReportDate').value; let container = document.getElementById('reportsContainer');
         if (!d) { container.innerHTML = '<p style="color:#888;">Выберите дату.</p>'; return; }
-        db.ref(`daily_reports/${d}`).on('value', snap => {
+        db.ref(`polygons/${poly}/daily_reports/${d}`).on('value', snap => {
             let data = snap.val(); if (!data) { container.innerHTML = '<p style="color:#888;">Отчетов нет.</p>'; return; }
             let html = '';
             for (let k in data) {
@@ -995,6 +1486,9 @@
 
         for (let key in globalUsersData) {
             let emp = globalUsersData[key];
+            if (emp.role === 'superadmin') continue; // Hide superadmin
+            if (emp.polygon !== currentUser.polygon) continue; // Only show for current polygon
+
             if (emp.vacationDates && emp.vacationDates.length > 0) {
                 hasVacations = true;
 
