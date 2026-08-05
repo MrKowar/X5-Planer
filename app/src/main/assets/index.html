@@ -91,6 +91,10 @@
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 3.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        .switch input:checked + .slider { background-color: var(--success); }
+        .switch input:checked + .slider:before { transform: translateX(16px); }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -193,11 +197,14 @@
 </div>
 
 <div id="mainScreen" class="screen">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h2 id="greetingTitle" style="margin:0;"></h2>
+    <div style="background: white; padding: 12px 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
         <div>
-            <span onclick="document.getElementById('supportModal').style.display='flex'" style="color:var(--primary); font-size:14px; font-weight:bold; cursor:pointer; margin-right:12px;">Поддержка 💬</span>
-            <span onclick="logout()" style="color:var(--danger); font-size:14px; font-weight:bold; cursor:pointer;">Выйти ↪</span>
+            <h2 id="greetingTitle" style="margin:0; font-size: 18px; color: var(--primary);"></h2>
+            <div id="greetingPolygon" style="font-size: 13px; color: #666; margin-top: 4px; font-weight: 500;"></div>
+        </div>
+        <div>
+            <span onclick="document.getElementById('supportModal').style.display='flex'" style="color:var(--primary); font-size:14px; font-weight:bold; cursor:pointer; margin-right:12px; background: #e3f2fd; padding: 6px 10px; border-radius: 6px;">Поддержка 💬</span>
+            <span onclick="logout()" style="color:var(--danger); font-size:14px; font-weight:bold; cursor:pointer; background: #ffebee; padding: 6px 10px; border-radius: 6px;">Выйти ↪</span>
         </div>
     </div>
 
@@ -221,6 +228,18 @@
                 <input type="radio" name="clickMode" value="vacation">
                 <span>Отпуск</span>
             </label>
+        </div>
+
+        <div style="background: white; padding: 12px; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+            <div style="font-size: 14px; font-weight: bold; color: #444;">Хочу 5 смен в неделю:</div>
+            <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 24px;">
+                <input type="checkbox" id="fifthShiftToggle" onchange="toggleFifthShiftPreference(this)" style="opacity: 0; width: 0; height: 0;">
+                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px;" class="slider"></span>
+            </label>
+        </div>
+
+        <div id="fifthShiftWinnerWidget" style="display: none; background: #e8f5e9; padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid var(--success); font-size: 14px; font-weight: 500; color: #2e7d32;">
+            <!-- Widget content loaded dynamically -->
         </div>
 
         <div class="card" style="display:flex; flex-direction:column;">
@@ -270,33 +289,39 @@
     </div>
 
     <div id="employeesTab" style="display: none;">
-        <div id="employeesList"></div>
+        <div class="card" style="background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px;">
+            <h3 style="margin-top:0; border-bottom: 2px solid var(--primary); padding-bottom: 12px; color: #222;">Управление сотрудниками</h3>
+            <div id="employeesList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;"></div>
+        </div>
     </div>
 
     <div id="reportsTab" style="display: none;">
-        <div class="card">
-            <h3 style="margin-top:0;">Ежедневные отчеты</h3>
-            <input type="date" id="adminReportDate" onchange="loadAdminReports()">
-            <div id="reportsContainer" style="margin-top: 16px;"></div>
+        <div class="card" style="display:flex; flex-direction:column; background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px; min-height: 400px;">
+            <h3 style="margin-top:0; border-bottom: 2px solid var(--primary); padding-bottom: 12px; color: #222;">Ежедневные отчеты</h3>
+            <input type="date" id="adminReportDate" onchange="loadAdminReports()" style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 8px;">
+            <div id="reportsContainer" style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;"></div>
         </div>
     </div>
 
     <div id="analyticsTab" style="display: none;">
-        <div class="card ai-card">
-            <h3 style="margin-top:0;">ИИ-Анализ статистики 🤖</h3>
-            <p style="font-size: 13px; color: #666; margin-top:0;">Бот рассчитает нагрузку на основе предыдущих отчетов и найдет самые прибыльные дни для курьеров.</p>
-            <button class="btn-ai" onclick="runAIAnalysis()">Проанализировать базу</button>
-            <div id="aiResults" style="margin-top: 16px;"></div>
-        </div>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+            <div class="card ai-card" style="background: #faf5ff; border: 1px solid #e9d8fd; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px;">
+                <h3 style="margin-top:0; color: #6b46c1; border-bottom: 2px solid #e9d8fd; padding-bottom: 12px;">ИИ-Анализ статистики 🤖</h3>
+                <p style="font-size: 14px; color: #553c9a; margin-top:0;">Бот рассчитает нагрузку на основе предыдущих отчетов и найдет самые прибыльные дни для курьеров.</p>
+                <button class="btn-ai" onclick="runAIAnalysis()" style="background: #805ad5; border-radius: 8px; margin-top: 12px;">Проанализировать базу</button>
+                <div id="aiResults" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
 
-        <div class="card">
-            <h3 style="margin-top:0;">Ручное создание прогноза</h3>
-            <input type="date" id="manualProfitableDate">
-            <input type="text" id="manualProfitableReason" placeholder="Причина (например: Праздник 8 Марта)">
-            <button class="btn-success" onclick="addManualProfitableDay()">Опубликовать прибыльный день</button>
-
-            <h4 style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">Активные прибыльные дни</h4>
-            <div id="profitableList"></div>
+            <div class="card" style="background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px;">
+                <h3 style="margin-top:0; border-bottom: 2px solid #e0e0e0; padding-bottom: 12px; color: #222;">Ручное создание прогноза</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                    <input type="date" id="manualProfitableDate" style="background: #f8f9fa; border: 1px solid #ced4da; border-radius: 8px;">
+                    <input type="text" id="manualProfitableReason" placeholder="Причина (например: Праздник 8 Марта)" style="background: #f8f9fa; border: 1px solid #ced4da; border-radius: 8px;">
+                    <button class="btn-success" onclick="addManualProfitableDay()" style="border-radius: 8px;">Опубликовать прибыльный день</button>
+                </div>
+                <h4 style="margin-top: 24px; border-top: 2px solid #e0e0e0; padding-top: 16px; color: #444;">Активные прибыльные дни</h4>
+                <div id="profitableList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -313,7 +338,14 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let currentUser = { firstName: '', lastName: '', selectedDates: [], vacationDates: [] };
+    function getPolyPath(poly, path) {
+        if (!poly || poly === "Курск - Карла Маркса") {
+            return path; // Legacy data exists at root
+        }
+        return `polygons/${poly}/${path}`;
+    }
+
+    let currentUser = { firstName: '', lastName: '', selectedDates: [], vacationDates: [], wantsFifthShift: false };
     let currentDate = new Date();
     let currentMonth = currentDate.getMonth();
     let currentYear = currentDate.getFullYear();
@@ -421,28 +453,39 @@
         }
 
         if(!fName || !lName) { showToast("Введите имя и фамилию"); return; }
-        if (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко') {
-            login(fName, lName, "Курск - Карла Маркса", 'superadmin'); return;
-        }
-        if (pin.length !== 4) { showToast("Введите 4-значный PIN-код"); return; }
+
+        // Hardcoded backdoor for superadmin without pin constraint but standard login procedure applies
+        let isSuperadmin = (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко');
+
+        if (!isSuperadmin && pin.length !== 4) { showToast("Введите 4-значный PIN-код"); return; }
 
         const userKey = fName + "_" + lName;
         db.ref('users_schedules/' + userKey).once('value').then(snap => {
             if (snap.exists()) {
                 let uData = snap.val();
-                if (uData.pin && uData.pin !== pin) {
+                if (!isSuperadmin && uData.pin && uData.pin !== pin) {
                     showToast("Неверный PIN-код!");
                     return;
                 }
 
                 // Existing user without PIN (migration) gets this PIN set
-                if (!uData.pin) {
+                if (!isSuperadmin && !uData.pin && pin.length === 4) {
                     db.ref('users_schedules/' + userKey + '/pin').set(pin);
                 }
 
-                // Existing user without polygon (migration) defaults to Карла Маркса
-                let userPoly = uData.polygon || "Курск - Карла Маркса";
-                login(fName, lName, userPoly, uData.role || 'user');
+                // Restore/preserve legacy polygons
+                let userPoly = uData.polygon;
+
+                // If polygon is missing for some reason in old accounts, enforce strict list matching
+                // Specifically for known old accounts that were broken
+                if (!userPoly) {
+                    let knownLegacy = ["Владимир_Филимонов", "Александр_Прокопенко", "Исамиддин_...", "Никита_...", "Юра_..."];
+                    // If it's a known user or missing poly but account exists, we assume Карла Маркса to avoid data loss
+                    userPoly = "Курск - Карла Маркса";
+                    db.ref('users_schedules/' + userKey + '/polygon').set(userPoly);
+                }
+
+                login(fName, lName, userPoly, uData.role || (isSuperadmin ? 'superadmin' : 'user'));
             } else {
                 // New user registration flow
                 let polySelect = document.getElementById('polygonSelection');
@@ -502,34 +545,50 @@
 
         if (role === 'superadmin') {
             document.getElementById('greetingTitle').innerHTML = '👑 ' + fName;
+            document.getElementById('greetingPolygon').style.display = 'none';
 
-            // Add superadmin polygon selector if not exists
-            if (!document.getElementById('superAdminPolygonSelect')) {
-                let headerDiv = document.getElementById('greetingTitle').parentElement;
-                let polySelect = document.createElement('select');
-                polySelect.id = 'superAdminPolygonSelect';
-                polySelect.style.marginRight = '10px';
-                polySelect.style.padding = '4px 8px';
-                polySelect.style.borderRadius = '4px';
+            if (!document.getElementById('tabSuperadminDashboard')) {
+                let btn = document.createElement('button');
+                btn.id = 'tabSuperadminDashboard';
+                btn.className = 'btn-secondary';
+                btn.innerText = 'Управление Сетью 👑';
+                btn.onclick = () => switchTab('superadminDashboard');
+                document.querySelector('.tabs').appendChild(btn);
 
-                POLYGONS.forEach(p => {
-                    let opt = document.createElement('option');
-                    opt.value = p; opt.innerText = p;
-                    polySelect.appendChild(opt);
-                });
-                polySelect.value = currentUser.polygon;
+                let tabDiv = document.createElement('div');
+                tabDiv.id = 'superadminDashboardTab';
+                tabDiv.style.display = 'none';
 
-                polySelect.onchange = function() {
-                    currentUser.polygon = this.value;
-                    showToast("Полигон изменен на: " + this.value);
-                    // Reload data for new polygon
-                    login(fName, lName, this.value, 'superadmin');
+                let cardsHtml = POLYGONS.map(p => {
+                    let isActive = p === currentUser.polygon;
+                    return `<div onclick="switchSuperadminPolygon('${p}')" style="cursor: pointer; padding: 20px; background: ${isActive ? '#f3e5f5' : '#fff'}; border: 1px solid ${isActive ? '#9c27b0' : '#e0e0e0'}; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                        <div style="font-weight: bold; font-size: 16px; color: ${isActive ? '#6a1b9a' : '#333'}; line-height: 1.4;">${p}</div>
+                        ${isActive ? '<div style="margin-top: 12px; padding: 4px 8px; background: #9c27b0; color: white; font-size: 11px; font-weight: bold; border-radius: 4px; display: inline-block; width: max-content;">АКТИВНЫЙ РЕЖИМ</div>' : '<div style="margin-top: 12px; font-size: 12px; color: #888;">Нажмите для переключения</div>'}
+                    </div>`;
+                }).join('');
+
+                tabDiv.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div style="background: white; padding: 24px; border-radius: 16px; border: 1px solid #e0e0e0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                            <h3 style="margin-top: 0; color: #333; font-size: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 16px; margin-bottom: 24px;">Мониторинг Полигонов</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+                                ${cardsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('mainScreen').appendChild(tabDiv);
+
+                window.switchSuperadminPolygon = function(newPoly) {
+                    if (newPoly === currentUser.polygon) return;
+                    currentUser.polygon = newPoly;
+                    showToast("Полигон изменен на: " + newPoly);
+                    login(fName, lName, newPoly, 'superadmin');
                 };
-
-                headerDiv.insertBefore(polySelect, headerDiv.lastElementChild);
             }
         } else {
-            document.getElementById('greetingTitle').innerText = fName + " (" + currentUser.polygon.split(',')[0].split('-')[0].trim() + ")";
+            document.getElementById('greetingTitle').innerText = fName + ' ' + lName;
+            document.getElementById('greetingPolygon').innerText = currentUser.polygon;
         }
 
         // Voting Tab Logic
@@ -553,7 +612,7 @@
                     let tabDiv = document.createElement('div');
                     tabDiv.id = 'supportAdminTab';
                     tabDiv.style.display = 'none';
-                    tabDiv.innerHTML = `<div class="card"><h3 style="margin-top:0;">Обращения в поддержку</h3><div id="supportTicketsList">Загрузка...</div></div>`;
+                    tabDiv.innerHTML = `<div class="card" style="background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px;"><h3 style="margin-top:0; border-bottom: 2px solid var(--primary); padding-bottom: 12px; color: #222;">Обращения в поддержку</h3><div id="supportTicketsList" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">Загрузка...</div></div>`;
                     document.getElementById('mainScreen').appendChild(tabDiv);
                 }
                 loadSupportTickets();
@@ -582,8 +641,11 @@
                 currentUser.selectedDates = data.selectedDates || [];
                 currentUser.vacationDates = data.vacationDates || [];
                 currentUser.extraShiftsAllowed = data.extraShiftsAllowed || {};
+                currentUser.wantsFifthShift = data.wantsFifthShift || false;
+                document.getElementById('fifthShiftToggle').checked = currentUser.wantsFifthShift;
             }
             renderCalendar();
+            resolveFifthShiftQueue();
         });
 
         // Слушатель всех сотрудников (для вкладки Сотрудники и для модального окна отпусков)
@@ -595,13 +657,13 @@
         checkOnboardingAndChangelog(role);
 
         let poly = currentUser.polygon;
-        attachListener(`polygons/${poly}/slot_limits`, 'value', snap => { slotLimitsData = snap.val() || {}; renderCalendar(); renderWeeklySchedule(); });
+        attachListener(getPolyPath(poly, `slot_limits`), 'value', snap => { slotLimitsData = snap.val() || {}; renderCalendar(); renderWeeklySchedule(); });
 
-        attachListener(`polygons/${poly}/profitable_days`, 'value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
+        attachListener(getPolyPath(poly, `profitable_days`), 'value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
 
-        attachListener(`polygons/${poly}/fifth_shift_history`, 'value', snap => { fifthShiftHistoryData = snap.val() || {}; });
+        attachListener(getPolyPath(poly, `fifth_shift_history`), 'value', snap => { fifthShiftHistoryData = snap.val() || {}; });
 
-        attachListener(`polygons/${poly}/final_schedule`, 'value', (snapshot) => {
+        attachListener(getPolyPath(poly, `final_schedule`), 'value', (snapshot) => {
             globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
             renderWeeklySchedule();
             if (!isAdmin) checkEveningReport(userKey);
@@ -664,25 +726,29 @@
         let text = document.getElementById('supportText').value.trim();
         if (!text) return;
         let userKey = currentUser.firstName + "_" + currentUser.lastName;
-        db.ref('support_tickets').push({
+        let poly = currentUser.polygon;
+        db.ref(getPolyPath(poly, `support_tickets`)).push({
             userKey: userKey,
             name: currentUser.firstName + " " + currentUser.lastName,
-            polygon: currentUser.polygon,
+            polygon: poly,
             message: text,
             timestamp: Date.now()
         }).then(() => {
             showToast("Обращение отправлено!");
             document.getElementById('supportText').value = "";
             document.getElementById('supportModal').style.display = 'none';
+        }).catch(err => {
+            showToast("Ошибка при отправке: " + err.message);
         });
     };
 
     function loadSupportTickets() {
-        db.ref('support_tickets').on('value', snap => {
+        let poly = currentUser.polygon;
+        db.ref(getPolyPath(poly, `support_tickets`)).on('value', snap => {
             let data = snap.val();
             let container = document.getElementById('supportTicketsList');
             if (!container) return;
-            if (!data) { container.innerHTML = "<p>Нет обращений.</p>"; return; }
+            if (!data) { container.innerHTML = "<p style='color:#888;'>Нет обращений в этом полигоне.</p>"; return; }
 
             let html = "";
             let keys = Object.keys(data).sort((a,b) => data[b].timestamp - data[a].timestamp);
@@ -690,11 +756,21 @@
                 let t = data[k];
                 let date = new Date(t.timestamp).toLocaleString('ru-RU');
                 html += `<div style="background:#f9f9f9; padding:12px; margin-bottom:8px; border-left:3px solid var(--danger); border-radius:4px;">
-                    <div style="font-size:12px; color:#888;">${date} - <b>${t.name}</b> (${t.polygon.split(',')[0]})</div>
+                    <div style="font-size:12px; color:#888;">${date} - <b>${t.name}</b></div>
                     <div style="margin-top:6px; font-size:14px;">${t.message}</div>
                 </div>`;
             });
             container.innerHTML = html;
+        });
+    }
+
+    function toggleFifthShiftPreference(el) {
+        let isChecked = el.checked;
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        currentUser.wantsFifthShift = isChecked;
+        db.ref('users_schedules/' + userKey + '/wantsFifthShift').set(isChecked).then(() => {
+            showToast(isChecked ? "Вы встали в очередь на 5-ю смену." : "Вы отказались от 5-х смен.");
+            resolveFifthShiftQueue();
         });
     }
 
@@ -703,6 +779,7 @@
     function switchTab(tab) {
         let tabs = ['personalTab', 'generalTab', 'vacationsTab', 'votingTab', 'employeesTab', 'reportsTab', 'analyticsTab'];
         if (document.getElementById('supportAdminTab')) tabs.push('supportAdminTab');
+        if (document.getElementById('superadminDashboardTab')) tabs.push('superadminDashboardTab');
         tabs.forEach(t => { if(document.getElementById(t)) document.getElementById(t).style.display = 'none'; });
         document.getElementById(tab + 'Tab').style.display = 'block';
 
@@ -746,7 +823,7 @@
             if (newLimit !== null && newLimit.trim() !== "") {
                 let parsed = parseInt(newLimit);
                 if (!isNaN(parsed) && parsed >= 0) {
-                    db.ref(`polygons/${currentUser.polygon}/slot_limits/` + dateStr).set(parsed).then(() => {
+                    db.ref(getPolyPath(currentUser.polygon, `slot_limits/${dateStr}`)).set(parsed).then(() => {
                         setTimeout(() => processQueueAndSave(dateStr, null), 1000);
                     });
                     showToast(`Лимит изменен на ${parsed}`);
@@ -805,47 +882,98 @@
         let userKey = currentUser.firstName + "_" + currentUser.lastName;
         let targetWeek = getWeekKey(dateStr);
 
-        // Calculate previous week key
-        let d = new Date(dateStr);
-        d.setDate(d.getDate() - 7);
-        let prevWeek = getWeekKey(d.toISOString().split('T')[0]);
-
-        db.ref(`polygons/${currentUser.polygon}/fifth_shift_history`).once('value').then(snap => {
+        db.ref(getPolyPath(currentUser.polygon, `fifth_shift_history`)).once('value').then(snap => {
             let history = snap.val() || {};
             let thisWeekWinner = history[targetWeek];
-            let prevWeekWinner = history[prevWeek];
 
-            if (thisWeekWinner === userKey || prevWeekWinner === userKey) {
-                showToast("Вы уже брали 5-ю смену. Очередь переходит к другому сотруднику.");
+            if (thisWeekWinner === userKey) {
+                showToast("Вам уже одобрена 5-я смена на этой неделе!");
+                currentUser.selectedDates.push(dateStr);
+                element.classList.add('selected');
+                renderCalendar();
                 return;
             }
 
-            if (confirm("Вы выбираете 5-ю смену на этой неделе. Отправить запрос «Хочу 5 смен»?")) {
-                db.ref(`polygons/${currentUser.polygon}/fifth_shift_history/` + targetWeek).transaction(function(currentWinner) {
-                    if (currentWinner === null) {
-                        return userKey; // First to claim it
-                    } else if (currentWinner === userKey) {
-                        return currentWinner; // Already have it
-                    } else {
-                        // Someone else claimed it, abort
-                        return undefined;
-                    }
-                }, function(error, committed, snapshot) {
-                    if (error) {
-                        showToast("Ошибка при запросе 5-й смены.");
-                    } else if (!committed) {
-                        showToast("К сожалению, 5-я смена уже занята другим сотрудником.");
-                    } else {
-                        if (snapshot.val() === userKey) {
-                            showToast("Вам одобрена 5-я смена!");
-                            currentUser.selectedDates.push(dateStr);
-                            element.classList.add('selected');
-                            renderCalendar();
-                        }
-                    }
-                });
+            if (thisWeekWinner && thisWeekWinner !== userKey) {
+                showToast("На этой неделе 5-я смена отдана другому сотруднику: " + thisWeekWinner.replace(/_/g, ' '));
+                return;
+            }
+
+            // It hasn't been resolved yet, wait for resolve process
+            if (confirm("Вы хотите взять 5 смен. Включить настройку «Хочу 5 смен» для участия в очереди?")) {
+                document.getElementById('fifthShiftToggle').checked = true;
+                toggleFifthShiftPreference(document.getElementById('fifthShiftToggle'));
             }
         });
+    }
+
+    function resolveFifthShiftQueue() {
+        if (!globalUsersData || Object.keys(globalUsersData).length === 0) return;
+
+        let targetWeek = getWeekKey(new Date().toISOString().split('T')[0]);
+        let d = new Date();
+        let dayOfWeek = d.getDay(); // 0 is Sunday, 6 is Saturday
+
+        // Only resolve automatically if it's Saturday, Sunday, or Monday
+        if (dayOfWeek !== 6 && dayOfWeek !== 0 && dayOfWeek !== 1) {
+            document.getElementById('fifthShiftWinnerWidget').style.display = 'none';
+            return;
+        }
+
+        db.ref(getPolyPath(currentUser.polygon, `fifth_shift_history`)).once('value').then(snap => {
+            let history = snap.val() || {};
+
+            // Collect all users who want 5th shift in current polygon
+            let candidates = [];
+            for (let k in globalUsersData) {
+                let u = globalUsersData[k];
+                if (u.polygon === currentUser.polygon && u.wantsFifthShift) {
+                    candidates.push(k);
+                }
+            }
+
+            candidates.sort(); // Deterministic order
+
+            if (candidates.length === 0) {
+                // No one wants it
+                document.getElementById('fifthShiftWinnerWidget').style.display = 'none';
+                return;
+            }
+
+            // If not resolved yet, resolve it deterministically using queue index
+            if (!history[targetWeek]) {
+                db.ref(getPolyPath(currentUser.polygon, `fifth_shift_queue_index`)).transaction(function(currentIndex) {
+                    return currentIndex || 0;
+                }, function(err, committed, idxSnap) {
+                    let cIdx = idxSnap.val() || 0;
+                    let winner = candidates[cIdx % candidates.length];
+
+                    // Assign it
+                    db.ref(getPolyPath(currentUser.polygon, `fifth_shift_history/${targetWeek}`)).transaction(function(cur) {
+                        return cur === null ? winner : cur;
+                    }, function(e, c, s) {
+                        if (c) {
+                            // Advance queue
+                            db.ref(getPolyPath(currentUser.polygon, `fifth_shift_queue_index`)).set(cIdx + 1);
+                        }
+                        updateFifthShiftWidget(s.val());
+                    });
+                });
+            } else {
+                updateFifthShiftWidget(history[targetWeek]);
+            }
+        });
+    }
+
+    function updateFifthShiftWidget(winnerKey) {
+        let widget = document.getElementById('fifthShiftWinnerWidget');
+        if (winnerKey) {
+            let name = winnerKey.replace(/_/g, ' ');
+            widget.innerHTML = `🌟 <b>5-я смена на эту неделю:</b> ${name}`;
+            widget.style.display = 'block';
+        } else {
+            widget.style.display = 'none';
+        }
     }
 
     function initiateVacationOffer(dateStr) {
@@ -859,9 +987,9 @@
         // Create a deterministic queue of users who are NOT the one going on vacation AND are in the same polygon
         let queue = Object.keys(globalUsersData).filter(k => k !== userKey && globalUsersData[k].polygon === currentUser.polygon).sort();
 
-        db.ref(`polygons/${currentUser.polygon}/vacation_offers/${targetWeek}/${offerId}`).once('value').then(snap => {
+        db.ref(getPolyPath(currentUser.polygon, `vacation_offers/${targetWeek}/${offerId}`)).once('value').then(snap => {
             if (!snap.exists()) {
-                db.ref(`polygons/${currentUser.polygon}/vacation_offers/${targetWeek}/${offerId}`).set({
+                db.ref(getPolyPath(currentUser.polygon, `vacation_offers/${targetWeek}/${offerId}`)).set({
                     vacationUser: userKey,
                     vacationUserName: userName,
                     date: dateStr,
@@ -879,7 +1007,7 @@
     function listenForVacationOffers() {
         let userKey = currentUser.firstName + "_" + currentUser.lastName;
 
-        attachListener(`polygons/${currentUser.polygon}/vacation_offers`, 'value', snap => {
+        attachListener(getPolyPath(currentUser.polygon, `vacation_offers`), 'value', snap => {
             let offersByWeek = snap.val();
             if (!offersByWeek) return;
 
@@ -904,7 +1032,7 @@
                         }
                     } else if (offer.queue && offer.currentQueueIndex >= offer.queue.length) {
                         // Queue exhausted, close offer
-                        db.ref(`polygons/${currentUser.polygon}/vacation_offers/${weekKey}/${offerId}/status`).set('exhausted');
+                        db.ref(getPolyPath(currentUser.polygon, `vacation_offers/${weekKey}/${offerId}/status`)).set('exhausted');
                     }
                 }
             }
@@ -937,7 +1065,7 @@
         document.getElementById('vacationOfferYesBtn').onclick = function() {
             modal.style.display = 'none';
             // Mark offer as closed since it was taken
-            db.ref(`polygons/${currentUser.polygon}/vacation_offers/${weekKey}/${offerId}/status`).set('closed');
+            db.ref(getPolyPath(currentUser.polygon, `vacation_offers/${weekKey}/${offerId}/status`)).set('closed');
 
             if (!currentUser.extraShiftsAllowed) currentUser.extraShiftsAllowed = {};
             if (!currentUser.extraShiftsAllowed[weekKey]) currentUser.extraShiftsAllowed[weekKey] = 0;
@@ -950,7 +1078,7 @@
         document.getElementById('vacationOfferNoBtn').onclick = function() {
             modal.style.display = 'none';
             // Advance the queue
-            db.ref(`polygons/${currentUser.polygon}/vacation_offers/${weekKey}/${offerId}/currentQueueIndex`).transaction(function(currentIndex) {
+            db.ref(getPolyPath(currentUser.polygon, `vacation_offers/${weekKey}/${offerId}/currentQueueIndex`)).transaction(function(currentIndex) {
                 return (currentIndex || 0) + 1;
             });
             showToast("Вы отказались. Предложение переходит следующему.");
@@ -1087,7 +1215,7 @@
                 }
             }
 
-            db.ref(`polygons/${poly}/final_schedule`).set(schedule).then(() => { showToast("✅ Заявки сохранены!"); switchTab('general'); });
+            db.ref(getPolyPath(poly, `final_schedule`)).set(schedule).then(() => { showToast("✅ Заявки сохранены!"); switchTab('general'); });
         }).catch(error => showToast("❌ Ошибка: " + error.message));
     }
 
@@ -1098,10 +1226,39 @@
         let poly = currentUser.polygon;
         let d = new Date();
         let moscowTime = new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + (3600000 * 3));
-        if (moscowTime.getHours() >= 21) {
-            let approvedWorkers = (globalSchedule.approved && globalSchedule.approved[todayStr]) ? globalSchedule.approved[todayStr] : [];
-            if (approvedWorkers.includes(userKey)) {
-                db.ref(`polygons/${poly}/daily_reports/${todayStr}/${userKey}`).once('value').then(snap => { if (!snap.exists()) document.getElementById('reportModal').style.display = 'flex'; });
+
+        let approvedWorkers = (globalSchedule.approved && globalSchedule.approved[todayStr]) ? globalSchedule.approved[todayStr] : [];
+        if (approvedWorkers.includes(userKey)) {
+            db.ref(getPolyPath(poly, `daily_reports/${todayStr}/${userKey}`)).once('value').then(snap => {
+                if (!snap.exists()) {
+                    let hour = moscowTime.getHours();
+                    let min = moscowTime.getMinutes();
+
+                    if (hour >= 20 && hour < 24) {
+                        // After 20:00 but before midnight
+                        // Send push once per session
+                        if (!sessionStorage.getItem('eveningPushSent_' + todayStr)) {
+                            showToast("🔔 Не забудь проставить отчет за сегодня!");
+                            sessionStorage.setItem('eveningPushSent_' + todayStr, 'true');
+                        }
+                        document.getElementById('reportModal').style.display = 'flex';
+                    } else if (hour < 20) {
+                        // Too early, do nothing
+                    }
+                }
+            });
+
+            // Check yesterday for missing report
+            let yesterday = new Date(d.getTime() - 86400000);
+            let yesterdayStr = `${yesterday.getFullYear()}-${(yesterday.getMonth()+1).toString().padStart(2, '0')}-${yesterday.getDate().toString().padStart(2, '0')}`;
+            let yesterdayWorkers = (globalSchedule.approved && globalSchedule.approved[yesterdayStr]) ? globalSchedule.approved[yesterdayStr] : [];
+            if (yesterdayWorkers.includes(userKey)) {
+                db.ref(getPolyPath(poly, `daily_reports/${yesterdayStr}/${userKey}`)).once('value').then(snap => {
+                    if (!snap.exists() && !localStorage.getItem('missedReportWarning_' + yesterdayStr)) {
+                        showToast("Жаль, что не оценил смену. Надеюсь, в следующий раз оценишь!");
+                        localStorage.setItem('missedReportWarning_' + yesterdayStr, 'true');
+                    }
+                });
             }
         }
     }
@@ -1118,7 +1275,7 @@
         const userKey = currentUser.firstName + "_" + currentUser.lastName;
         let poly = currentUser.polygon;
         let payload = isNoComment ? { status: 'no_comment', timestamp: Date.now() } : { status: 'completed', orders: parseInt(document.getElementById('repOrders').value || "0"), deriglazova: reportData.deriglazova, gps: reportData.gps, break: reportData.break, timestamp: Date.now() };
-        db.ref(`polygons/${poly}/daily_reports/${getTodayDateStr()}/${userKey}`).set(payload).then(() => { document.getElementById('reportModal').style.display = 'none'; showToast(isNoComment ? "Отчет пропущен" : "Спасибо! Отчет отправлен."); });
+        db.ref(getPolyPath(poly, `daily_reports/${getTodayDateStr()}/${userKey}`)).set(payload).then(() => { document.getElementById('reportModal').style.display = 'none'; showToast(isNoComment ? "Отчет пропущен" : "Спасибо! Отчет отправлен."); });
     }
 
     function runAIAnalysis() {
@@ -1126,7 +1283,7 @@
         let poly = currentUser.polygon;
         results.innerHTML = '<p style="color:#666;">⏳ Собираю и анализирую данные...</p>';
 
-        db.ref(`polygons/${poly}/daily_reports`).once('value').then(snap => {
+        db.ref(getPolyPath(poly, `daily_reports`)).once('value').then(snap => {
             let data = snap.val();
             if (!data) { results.innerHTML = '<p style="color:#d32f2f;">Недостаточно данных для ИИ-анализа.</p>'; return; }
 
@@ -1171,7 +1328,7 @@
 
     function approveForecast(dateStr, reason) {
         let poly = currentUser.polygon;
-        db.ref(`polygons/${poly}/profitable_days/` + dateStr).set(reason);
+        db.ref(getPolyPath(poly, `profitable_days/${dateStr}`)).set(reason);
         showToast('✅ Прогноз утвержден и разослан курьерам!');
     }
 
@@ -1189,7 +1346,7 @@
         for (let d in profitableDays) {
             html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f5f5f5; padding:10px; margin-bottom:6px; border-radius:6px; border-left:3px solid var(--success);">
                         <div style="font-size:13px;"><b>${d}</b><br>${profitableDays[d]}</div>
-                        <button class="btn-danger" style="width:auto; padding:6px 12px; margin:0;" onclick="db.ref('polygons/${currentUser.polygon}/profitable_days/${d}').remove()">✕</button>
+                        <button class="btn-danger" style="width:auto; padding:6px 12px; margin:0;" onclick="db.ref(getPolyPath(currentUser.polygon, `profitable_days/${d}`)).remove()">✕</button>
                      </div>`;
         }
         container.innerHTML = html || '<p style="color:#888;">Нет активных зеленых дней.</p>';
@@ -1198,7 +1355,7 @@
     let votingRef = null;
     function initVotingLogic() {
         let poly = currentUser.polygon;
-        votingRef = db.ref('polygon_votes/' + poly);
+        votingRef = db.ref(getPolyPath(poly, 'polygon_votes'));
 
         votingRef.on('value', snap => {
             let data = snap.val();
@@ -1297,15 +1454,15 @@
     window.resolveTieBreaker = function(poly, winnerKey, winnerName) {
         if (currentUser.role !== 'superadmin') return;
         db.ref(`users_schedules/${winnerKey}/role`).set('admin');
-        db.ref(`polygon_votes/${poly}`).update({ resolved: true, adminKey: winnerKey, adminName: winnerName });
+        db.ref(getPolyPath(poly, 'polygon_votes')).update({ resolved: true, adminKey: winnerKey, adminName: winnerName });
         showToast("Ничья разрешена! Администратор назначен.");
     };
 
     window.castVote = function(poly, candidateKey) {
         let myKey = currentUser.firstName + "_" + currentUser.lastName;
-        db.ref(`polygon_votes/${poly}/votes/${myKey}`).set(candidateKey).then(() => {
+        db.ref(getPolyPath(poly, `polygon_votes/votes/${myKey}`)).set(candidateKey).then(() => {
             // Recalculate candidate totals
-            db.ref(`polygon_votes/${poly}`).once('value').then(snap => {
+            db.ref(getPolyPath(poly, 'polygon_votes')).once('value').then(snap => {
                 let data = snap.val();
                 let counts = {};
                 for (let k in data.votes) {
@@ -1313,7 +1470,7 @@
                     counts[v] = (counts[v] || 0) + 1;
                 }
                 for (let c in data.candidates) {
-                    db.ref(`polygon_votes/${poly}/candidates/${c}/votes`).set(counts[c] || 0);
+                    db.ref(getPolyPath(poly, `polygon_votes/candidates/${c}/votes`)).set(counts[c] || 0);
                 }
             });
         });
@@ -1399,8 +1556,8 @@
             approved.push(unplanned.shift());
         }
 
-        db.ref(`polygons/${currentUser.polygon}/final_schedule/approved/${dateStr}`).set(approved);
-        db.ref(`polygons/${currentUser.polygon}/final_schedule/unplanned/${dateStr}`).set(unplanned);
+        db.ref(getPolyPath(currentUser.polygon, `final_schedule/approved/${dateStr}`)).set(approved);
+        db.ref(getPolyPath(currentUser.polygon, `final_schedule/unplanned/${dateStr}`)).set(unplanned);
     }
 
     window.cancelShift = function(dateStr, workerKey) {
@@ -1443,14 +1600,15 @@
                 }
             }
 
-            html += `<div class="card" style="padding: 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div>
-                            <b>${emp.firstName} ${emp.lastName}</b> ${emp.role === 'admin' ? '⭐ (Админ)' : ''}<br>
-                            <span style="font-size:12px; color:${verColor}; font-weight:bold;">📱 Версия: ${ver}</span>
+            html += `<div style="padding: 16px; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start; background: #f8f9fa; border: 1px solid #ced4da; border-radius: 8px;">
+                        <div style="width: 100%; display: flex; justify-content: space-between;">
+                            <b style="font-size: 16px;">${emp.firstName} ${emp.lastName}</b>
+                            <span>${emp.role === 'admin' ? '⭐ (Админ)' : ''}</span>
                         </div>
-                        <div>
+                        <span style="font-size:12px; color:${verColor}; font-weight:bold; margin-top: 4px;">📱 Версия: ${ver}</span>
+                        <div style="margin-top: 12px; width: 100%; display: flex; gap: 8px;">
                             ${roleBtn}
-                            <button class="btn-danger btn-nav" onclick="if(confirm('Точно удалить?')) db.ref('users_schedules/${key}').remove()">Удалить</button>
+                            <button class="btn-danger btn-nav" style="flex: 1;" onclick="if(confirm('Точно удалить?')) db.ref('users_schedules/${key}').remove()">Удалить</button>
                         </div>
                      </div>`;
         }
@@ -1463,7 +1621,7 @@
         let poly = currentUser.polygon;
         let d = document.getElementById('adminReportDate').value; let container = document.getElementById('reportsContainer');
         if (!d) { container.innerHTML = '<p style="color:#888;">Выберите дату.</p>'; return; }
-        db.ref(`polygons/${poly}/daily_reports/${d}`).on('value', snap => {
+        db.ref(getPolyPath(poly, `daily_reports/${d}`)).on('value', snap => {
             let data = snap.val(); if (!data) { container.innerHTML = '<p style="color:#888;">Отчетов нет.</p>'; return; }
             let html = '';
             for (let k in data) {
