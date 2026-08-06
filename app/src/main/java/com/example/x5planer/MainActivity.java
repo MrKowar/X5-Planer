@@ -18,6 +18,8 @@ import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.provider.Settings;
+import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -231,6 +233,42 @@ public class MainActivity extends AppCompatActivity {
         @android.webkit.JavascriptInterface
         public int getAppVersion() {
             return getCurrentVersionCode();
+        }
+
+        @android.webkit.JavascriptInterface
+        public String getDeviceId() {
+            return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        }
+
+        @android.webkit.JavascriptInterface
+        public void saveSession(String firstName, String lastName, String polygon, String role) {
+            SharedPreferences prefs = getSharedPreferences("X5PlanerSession", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString("firstName", firstName);
+            editor.putString("lastName", lastName);
+            editor.putString("polygon", polygon);
+            editor.putString("role", role);
+            editor.apply();
+        }
+
+        @android.webkit.JavascriptInterface
+        public String getSession() {
+            SharedPreferences prefs = getSharedPreferences("X5PlanerSession", MODE_PRIVATE);
+            String fName = prefs.getString("firstName", "");
+            if (fName.isEmpty()) return "";
+
+            String lName = prefs.getString("lastName", "");
+            String poly = prefs.getString("polygon", "");
+            String role = prefs.getString("role", "user");
+
+            // Returns a JSON-like simple string we can parse easily in JS
+            return fName + "|" + lName + "|" + poly + "|" + role;
+        }
+
+        @android.webkit.JavascriptInterface
+        public void clearSession() {
+            SharedPreferences prefs = getSharedPreferences("X5PlanerSession", MODE_PRIVATE);
+            prefs.edit().clear().apply();
         }
     }
 }

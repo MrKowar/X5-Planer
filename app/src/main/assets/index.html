@@ -182,9 +182,9 @@
 <!-- Окно логина -->
 <div id="authScreen" class="screen active card" style="justify-content: center; max-height: 500px; margin-top: 20vh; overflow-y: auto;">
     <h2 style="margin-top:0; text-align: center;">Вход в систему</h2>
+    <p style="text-align: center; color: #666; font-size: 14px;">Авторизация происходит по защищенному ID вашего устройства. Введите ваши данные для привязки.</p>
     <input type="text" id="firstName" placeholder="Имя (например, Никита)">
     <input type="text" id="lastName" placeholder="Фамилия">
-    <input type="password" id="pinCode" placeholder="PIN-код (4 цифры)" maxlength="4" style="text-align:center; font-size: 20px; letter-spacing: 5px;" pattern="[0-9]*" inputmode="numeric">
 
     <div id="polygonSelection" style="display:none; margin-top: 10px;">
         <label style="font-size: 14px; font-weight: bold; color: #555;">Выберите ваш полигон (только при регистрации):</label>
@@ -193,7 +193,7 @@
         </select>
     </div>
 
-    <button onclick="attemptLogin()">Войти / Зарегистрироваться</button>
+    <button onclick="attemptLogin()">Привязать устройство и войти</button>
 </div>
 
 <div id="mainScreen" class="screen">
@@ -408,13 +408,26 @@
             polySelect.appendChild(opt);
         });
 
-        fetchWeather();
-        let savedFirst = localStorage.getItem('plannerFirst');
-        let savedLast = localStorage.getItem('plannerLast');
-        if (savedFirst && savedLast) {
-            document.getElementById('firstName').value = savedFirst;
-            document.getElementById('lastName').value = savedLast;
-            login();
+        // Do not block load with weather fetch; fire and forget
+        setTimeout(fetchWeather, 500);
+
+        if (window.AndroidApp) {
+            let session = window.AndroidApp.getSession();
+            if (session && session.length > 0) {
+                let parts = session.split('|');
+                if (parts.length === 4) {
+                    login(parts[0], parts[1], parts[2], parts[3]);
+                    return;
+                }
+            }
+        } else {
+            // Fallback for web browser testing
+            let savedFirst = localStorage.getItem('plannerFirst');
+            let savedLast = localStorage.getItem('plannerLast');
+            let savedPoly = localStorage.getItem('plannerPolygon');
+            if (savedFirst && savedLast && savedPoly) {
+                login(savedFirst, savedLast, savedPoly, 'user');
+            }
         }
     };
 
@@ -445,7 +458,6 @@
     function attemptLogin() {
         let fName = document.getElementById('firstName').value.trim();
         let lName = document.getElementById('lastName').value.trim();
-        let pin = document.getElementById('pinCode').value.trim();
 
         // Fix for specific user
         if (fName.toLowerCase() === 'хуямир' && lName.toLowerCase() === 'филимонов') {
@@ -454,33 +466,30 @@
 
         if(!fName || !lName) { showToast("Введите имя и фамилию"); return; }
 
-        // Hardcoded backdoor for superadmin without pin constraint but standard login procedure applies
         let isSuperadmin = (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко');
 
-        if (!isSuperadmin && pin.length !== 4) { showToast("Введите 4-значный PIN-код"); return; }
+        let currentDeviceId = window.AndroidApp ? window.AndroidApp.getDeviceId() : 'web-fallback-id';
 
         const userKey = fName + "_" + lName;
         db.ref('users_schedules/' + userKey).once('value').then(snap => {
             if (snap.exists()) {
                 let uData = snap.val();
-                if (!isSuperadmin && uData.pin && uData.pin !== pin) {
-                    showToast("Неверный PIN-код!");
-                    return;
-                }
 
-                // Existing user without PIN (migration) gets this PIN set
-                if (!isSuperadmin && !uData.pin && pin.length === 4) {
-                    db.ref('users_schedules/' + userKey + '/pin').set(pin);
+                // Device ID validation
+                if (uData.deviceId) {
+                    if (uData.deviceId !== currentDeviceId && !isSuperadmin) {
+                        showToast("Доступ заблокирован! Эта учетная запись привязана к другому устройству.");
+                        return;
+                    }
+                } else {
+                    // Legacy migration: bind the device ID now
+                    db.ref('users_schedules/' + userKey + '/deviceId').set(currentDeviceId);
                 }
 
                 // Restore/preserve legacy polygons
                 let userPoly = uData.polygon;
 
-                // If polygon is missing for some reason in old accounts, enforce strict list matching
-                // Specifically for known old accounts that were broken
                 if (!userPoly) {
-                    let knownLegacy = ["Владимир_Филимонов", "Александр_Прокопенко", "Исамиддин_...", "Никита_...", "Юра_..."];
-                    // If it's a known user or missing poly but account exists, we assume Карла Маркса to avoid data loss
                     userPoly = "Курск - Карла Маркса";
                     db.ref('users_schedules/' + userKey + '/polygon').set(userPoly);
                 }
@@ -507,7 +516,7 @@
                 db.ref('users_schedules/' + userKey).set({
                     firstName: fName,
                     lastName: lName,
-                    pin: pin,
+                    deviceId: currentDeviceId,
                     polygon: selectedPoly,
                     role: 'user',
                     selectedDates: [],
@@ -529,8 +538,13 @@
         currentUser.polygon = polygon;
         currentUser.role = role;
 
+        if (window.AndroidApp) {
+            window.AndroidApp.saveSession(fName, lName, polygon, role);
+        }
+
         localStorage.setItem('plannerFirst', fName);
         localStorage.setItem('plannerLast', lName);
+        localStorage.setItem('plannerPolygon', polygon);
 
         // --- Получаем версию приложения из Android Studio ---
         let appVer = 'Старое/Веб';
@@ -652,6 +666,8 @@
         attachListener('users_schedules', 'value', snap => {
             globalUsersData = snap.val() || {};
             if (isAdmin) loadEmployees();
+            // Call queue resolution here since we need globalUsersData
+            resolveFifthShiftQueue();
         });
 
         checkOnboardingAndChangelog(role);
@@ -774,7 +790,11 @@
         });
     }
 
-    function logout() { localStorage.removeItem('plannerFirst'); localStorage.removeItem('plannerLast'); location.reload(); }
+    function logout() {
+        if (window.AndroidApp) window.AndroidApp.clearSession();
+        localStorage.clear();
+        location.reload();
+    }
 
     function switchTab(tab) {
         let tabs = ['personalTab', 'generalTab', 'vacationsTab', 'votingTab', 'employeesTab', 'reportsTab', 'analyticsTab'];
@@ -851,13 +871,18 @@
                 let maxAllowed = 4 + extraShiftAllowed;
 
                 let userKey = currentUser.firstName + "_" + currentUser.lastName;
-                if (fifthShiftHistoryData[targetWeek] === userKey) {
-                    maxAllowed += 1;
+                let isWinner = (fifthShiftHistoryData[targetWeek] === userKey);
+                if (isWinner) {
+                    maxAllowed += 1; // Cap at 5 total automatically
                 }
 
-                // Allow up to maxAllowed automatically. If they try to select a 5th (without extra slots), handle 5th shift logic.
+                // Allow up to maxAllowed automatically. If they try to select more, handle accordingly.
                 if (shiftsInWeek >= maxAllowed) {
-                    handleFifthShiftRequest(dateStr, element);
+                    if (isWinner || shiftsInWeek >= 5) {
+                        showToast(`Вы достигли максимального лимита смен на этой неделе (${maxAllowed}).`);
+                    } else {
+                        handleFifthShiftRequest(dateStr, element);
+                    }
                     return; // Prevent normal toggle
                 }
 
@@ -910,11 +935,18 @@
     function resolveFifthShiftQueue() {
         if (!globalUsersData || Object.keys(globalUsersData).length === 0) return;
 
-        let targetWeek = getWeekKey(new Date().toISOString().split('T')[0]);
         let d = new Date();
         let dayOfWeek = d.getDay(); // 0 is Sunday, 6 is Saturday
 
-        // Only resolve automatically if it's Saturday, Sunday, or Monday
+        // On Saturday/Sunday, they are planning for the *next* week.
+        if (dayOfWeek === 6 || dayOfWeek === 0) {
+            d.setDate(d.getDate() + 3); // Push into the next week to get the correct target Monday
+        }
+
+        let targetWeek = getWeekKey(d.toISOString().split('T')[0]);
+
+        // Only show/resolve automatically if it's Saturday, Sunday, or Monday
+        // Note: For Monday, we don't offset the date, so it resolves for the current week (which is correct).
         if (dayOfWeek !== 6 && dayOfWeek !== 0 && dayOfWeek !== 1) {
             document.getElementById('fifthShiftWinnerWidget').style.display = 'none';
             return;
