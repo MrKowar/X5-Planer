@@ -17,8 +17,8 @@ android {
         applicationId = "com.example.x5planer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "4.0"
+        versionCode = 8
+        versionName = "8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -44,5 +44,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
+    implementation("androidx.work:work-runtime:2.9.1")
     implementation("com.google.firebase:firebase-database:20.3.0")
 }
