@@ -136,39 +136,111 @@
         .switch input:checked + .slider { background-color: var(--success); }
         .switch input:checked + .slider:before { transform: translateX(16px); }
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+/* === Кнопка "Я на линии" (Неоновая) === */
+.btn-neon {
+  margin: 15px auto;
+  display: block;
+  width: fit-content;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none;
+  cursor: pointer;
+  --border-right: 6px;
+  --text-stroke-color: rgba(33, 150, 243, 0.6);
+  --animation-color: #37FF8B;
+  --fs-size: 1.8em;
+  letter-spacing: 3px;
+  text-decoration: none;
+  font-size: var(--fs-size);
+  font-family: "Arial", sans-serif;
+  position: relative;
+  text-transform: uppercase;
+  color: transparent !important;
+  -webkit-text-stroke: 1px var(--text-stroke-color);
+}
 
+.btn-neon .hover-text {
+  position: absolute;
+  box-sizing: border-box;
+  content: attr(data-text);
+  color: var(--animation-color);
+  width: 0%;
+  inset: 0;
+  border-right: var(--border-right) solid var(--animation-color);
+  overflow: hidden;
+  transition: 0.5s;
+  -webkit-text-stroke: 1px var(--animation-color);
+  white-space: nowrap;
+}
+
+.btn-neon.active .hover-text {
+  width: 100%;
+  filter: drop-shadow(0 0 23px var(--animation-color));
+}
         /* === АНИМИРОВАННОЕ УВЕДОМЛЕНИЕ (ТОСТ) === */
-        .wrapper { position: fixed; bottom: 30px; top: auto; left: 50%; transform: translatex(-50%); pointer-events: none; z-index: 1000; }
-        .wrapper.expand > .notification-banner { opacity: 1; width: 250px; }
-        .wrapper.expand > svg.notification-icon { transform: translatex(calc(-85px - 50%)) translatey(-50%); }
-        .wrapper > .notification-banner { height: 46px; width: 46px; border-radius: 46px; background: #323232; position: absolute; top: 50%; left: 50%; overflow: hidden; opacity: 0; transform: translatex(-50%) translatey(-50%); transition-property: transform, opacity, width; transition-duration: 0.25s; display: flex; align-items: center; justify-content: center; }
-        .success-text { color: white; font-size: 15px; font-weight: 600; opacity: 0; margin-left: 24px; white-space: nowrap; transition: opacity 0.2s ease; }
-        .wrapper.expand .success-text { opacity: 1; transition-delay: 0.2s; }
-        .wrapper > svg.notification-icon { position: absolute; top: 50%; left: 50%; transform: translatex(-50%) translatey(-50%); width: 28px; height: 28px; transition-property: transform, opacity; transition-duration: 0.25s; opacity: 0; }
-        .wrapper.expand > svg.notification-icon { opacity: 1; animation: draw-and-fill 1.25s ease forwards; }
-        .cls-1 { fill: #009245; }
-        .cls-1, .cls-2 { stroke: #009245; stroke-miterlimit: 10; stroke-width: 3px; }
-        .cls-2 { fill: none; }
-        @keyframes draw-and-fill { 0% { fill-opacity: 0; stroke-dasharray: 200; stroke-dashoffset: 200; } 35% { fill-opacity: 0; } 90% { stroke-dashoffset: 0; } 100% { stroke-width: 0; fill-opacity: 1; } }
+
+        /* === НОВЫЕ УВЕДОМЛЕНИЯ СВЕРХУ СПРАВА === */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none; /* чтобы не блокировать клики под уведомлениями */
+        }
+
+        .toast {
+            min-width: 200px;
+            max-width: 300px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            pointer-events: auto;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            margin-right: 12px;
+        }
+
+        .toast-text {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        /* Цвета для разных типов */
+        .toast.green { background: #dcfce7; border-color: #22c55e; color: #166534; }
+        .toast.green svg { stroke: #16a34a; }
+
+        .toast.blue { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+        .toast.blue svg { stroke: #2563eb; }
+
+        .toast.red { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .toast.red svg { stroke: #dc2626; }
     </style>
 </head>
 <body>
 
 <!-- Обертка анимации уведомлений -->
-<div class="wrapper" id="notificationWrapper">
-    <div class="notification-banner">
-        <span class="success-text">Заявка отправлена!</span>
-    </div>
-    <svg class="notification-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 35 35">
-        <g id="Layer_2" data-name="Layer 2">
-            <g id="Layer_1-2" data-name="Layer 1">
-                <circle class="cls-1" cx="17.5" cy="17.5" r="16"/>
-                <path class="cls-2" d="M7.86,16.59l5.65,5.93Z"/>
-                <path class="cls-2" d="M14.2,25.77l13.51-13.9Z"/>
-            </g>
-        </g>
-    </svg>
-</div>
+<!-- Контейнер для уведомлений (сверху справа) -->
+<div id="toastContainer" class="toast-container"></div>
 
 <!-- Модальное окно отпусков -->
 <div id="vacationModal" class="modal-overlay">
@@ -272,8 +344,10 @@
         </div>
     </div>
 
-    <button id="startShiftBtn" onclick="startShift()" class="btn-success" style="display:block;">Я на линии</button>
-    <button id="endShiftBtn" onclick="endShift()" class="btn-danger" style="display:none;">Выйти с линии</button>
+    <button id="startShiftBtn" onclick="toggleShift()" class="btn-neon" data-text="&nbsp;Я НА ЛИНИИ&nbsp;">
+        <span class="actual-text">&nbsp;Я НА ЛИНИИ&nbsp;</span>
+        <span aria-hidden="true" class="hover-text">&nbsp;Я НА ЛИНИИ&nbsp;</span>
+    </button>
 
     <div class="tabs">
         <button id="tabPersonal" class="tab active" onclick="switchTab('personal')">Мои заявки</button>
@@ -477,13 +551,17 @@
     let shiftWatchInterval = null;
     let isOnShift = false;
 
+    function toggleShift() {
+        if (isOnShift) { endShift(); } else { startShift(); }
+    }
+
     function startShift() {
         if (!navigator.geolocation) { showToast("GPS недоступен на этом устройстве"); return; }
         isOnShift = true;
         updateShiftButtonsUI();
         checkGeoPosition();
         shiftWatchInterval = setInterval(checkGeoPosition, 60000);
-        showToast("Вы на линии. Отслеживание зоны включено.");
+        showToast("Вы встали на линию.", "green");
         if (window.AndroidApp && window.AndroidApp.startShiftTracking) {
             window.AndroidApp.startShiftTracking();
         }
@@ -493,7 +571,7 @@
         isOnShift = false;
         if (shiftWatchInterval) { clearInterval(shiftWatchInterval); shiftWatchInterval = null; }
         updateShiftButtonsUI();
-        showToast("Вы вышли с линии.");
+        showToast("Вы вышли с линии.", "blue");
         if (window.AndroidApp && window.AndroidApp.stopShiftTracking) {
             window.AndroidApp.stopShiftTracking();
         }
@@ -504,7 +582,7 @@
             pos => {
                 let inZone = isPointInPolygon(pos.coords.latitude, pos.coords.longitude, workZonePolygon);
                 if (!inZone) {
-                    showToast("⚠️ Внимание! Вы покинули рабочую зону или произошел сбой GPS");
+                   showToast("Вы находитесь вне зоны доставки и т.п", "red");
                 }
             },
             err => { console.log('GPS ошибка: ' + err.message); },
@@ -514,10 +592,9 @@
 
     function updateShiftButtonsUI() {
         let startBtn = document.getElementById('startShiftBtn');
-        let endBtn = document.getElementById('endShiftBtn');
-        if (startBtn) startBtn.style.display = isOnShift ? 'none' : 'block';
-        if (endBtn) endBtn.style.display = isOnShift ? 'block' : 'none';
+        if (startBtn) startBtn.classList.toggle('active', isOnShift);
     }
+
     function getPolyPath(poly, path) {
         if (!poly) {
             console.warn('getPolyPath вызван без полигона для пути: ' + path);
@@ -658,20 +735,30 @@
     }
 
     // НОВАЯ ФУНКЦИЯ УВЕДОМЛЕНИЙ (АНИМИРОВАННАЯ ГАЛОЧКА)
-    function showToast(message) {
-        const wrapper = document.getElementById('notificationWrapper');
-        if (!wrapper) return;
-        wrapper.querySelector('.success-text').innerText = message;
+   // НОВАЯ ФУНКЦИЯ УВЕДОМЛЕНИЙ (СВЕРХУ СПРАВА)
+    function showToast(message, type = 'green') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
 
-        wrapper.classList.remove('expand');
-        clearTimeout(window.notificationTimer);
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
 
+        toast.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 16h-1v-4h1m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+            </svg>
+            <div class="toast-text">${message}</div>
+        `;
+
+        container.appendChild(toast);
+
+        // Анимация появления
+        setTimeout(() => toast.classList.add('show'), 10);
+
+        // Удаление через 3.5 секунды
         setTimeout(() => {
-            wrapper.classList.add('expand');
-        }, 50);
-
-        window.notificationTimer = setTimeout(() => {
-            wrapper.classList.remove('expand');
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400); // ждем завершения CSS анимации
         }, 3500);
     }
 
@@ -1870,9 +1957,9 @@ function submitReport(isNoComment) {
         let html = '';
         for (let key in globalUsersData) {
             let emp = globalUsersData[key];
-            if (emp.role === 'superadmin') continue;
 
-            if (emp.polygon !== currentUser.polygon) continue;
+
+            if (emp.polygon && emp.polygon !== currentUser.polygon) continue;
 
             let ver = emp.appVersion || 'Старое/Веб';
 
@@ -1933,8 +2020,8 @@ function submitReport(isNoComment) {
 
         for (let key in globalUsersData) {
             let emp = globalUsersData[key];
-            if (emp.role === 'superadmin') continue;
-            if (emp.polygon !== currentUser.polygon) continue;
+
+            if (emp.polygon && emp.polygon !== currentUser.polygon) continue;
 
             if (emp.vacationDates && emp.vacationDates.length > 0) {
                 hasVacations = true;

@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
         // 2. Проверка обновлений при запуске
         checkForUpdates();
         requestLocationPermissionIfNeeded();
+        requestBatteryOptimizationExemption();
         // 3. Создаем WebView программно на весь экран
         WebView webView = new WebView(this);
 
@@ -109,7 +110,26 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(webView);
     }
-
+    private void requestBatteryOptimizationExemption() {
+        String packageName = getPackageName();
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Нужно разрешение")
+                    .setMessage("Чтобы отслеживание зоны и напоминания работали даже при закрытом приложении, отключите для X5 Planer оптимизацию батареи.")
+                    .setPositiveButton("Открыть настройки", (d, w) -> {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        intent.setData(Uri.parse("package:" + packageName));
+                        try {
+                            startActivity(intent);
+                        } catch (Exception e) {
+                            startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                        }
+                    })
+                    .setNegativeButton("Позже", null)
+                    .show();
+        }
+    }
     private void requestExactAlarmPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
@@ -338,16 +358,17 @@ public class MainActivity extends AppCompatActivity {
         public void cancelEveningReminders() {
             cancelTodayReminders(MainActivity.this);
         }
-    }
-    @android.webkit.JavascriptInterface
-    public void startShiftTracking() {
-        Intent serviceIntent = new Intent(MainActivity.this, GeoTrackingService.class);
-        androidx.core.content.ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
-    }
 
-    @android.webkit.JavascriptInterface
-    public void stopShiftTracking() {
-        stopService(new Intent(MainActivity.this, GeoTrackingService.class));
+        @android.webkit.JavascriptInterface
+        public void startShiftTracking() {
+            Intent serviceIntent = new Intent(MainActivity.this, GeoTrackingService.class);
+            androidx.core.content.ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
+        }
+
+        @android.webkit.JavascriptInterface
+        public void stopShiftTracking() {
+            stopService(new Intent(MainActivity.this, GeoTrackingService.class));
+        }
     }
     // ---------- ОФЛАЙН-ОЧЕРЕДЬ (WorkManager) ----------
 
