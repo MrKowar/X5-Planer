@@ -43,7 +43,62 @@
         .user-crown { font-size: 16px; margin-bottom: 2px; }
         .user-name { color: var(--primary); font-weight: 800; font-size: 18px; }
         .header-actions { display: flex; gap: 8px; }
-        .btn-support { background: #e3f2fd; color: #1976d2; border: none; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; margin: 0; width: auto; }
+        .btn-support { background: #e3f2fd; color: #1976d2; border: none; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; margin: 0; width: auto; position: relative; }
+        .btn-support .unread-dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); border: 2px solid #fff; display: none; }
+        .btn-support.has-unread .unread-dot { display: block; }
+
+        /* === ПОДДЕРЖКА (ЧАТ) === */
+        .sp-sheet { background: #fff; width: 100%; max-width: 440px; height: min(640px, 88vh); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
+        .sp-head { display: flex; align-items: center; gap: 12px; padding: 16px; background: linear-gradient(135deg, #1e88e5, #6a1b9a); color: #fff; }
+        .sp-avatar { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0; position: relative; }
+        .sp-avatar.online::after { content: ""; position: absolute; right: 1px; bottom: 1px; width: 11px; height: 11px; border-radius: 50%; background: #4ade80; border: 2px solid #fff; }
+        .sp-head-info { flex: 1; min-width: 0; line-height: 1.25; }
+        .sp-head-name { font-weight: 800; font-size: 16px; }
+        .sp-head-sub { font-size: 12px; opacity: 0.85; }
+        .sp-close { background: rgba(255,255,255,0.18); color: #fff; width: 34px; height: 34px; padding: 0; margin: 0; border-radius: 50%; font-size: 18px; line-height: 34px; flex-shrink: 0; }
+        .sp-body { flex: 1; overflow-y: auto; padding: 16px; background: #f3f6fb; display: flex; flex-direction: column; gap: 8px; }
+        .sp-day { align-self: center; font-size: 11px; color: #64748b; background: #e2e8f0; padding: 3px 10px; border-radius: 10px; margin: 6px 0; }
+        .sp-msg { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .sp-msg .sp-time { display: block; font-size: 10px; margin-top: 4px; opacity: 0.6; text-align: right; }
+        .sp-msg .sp-author { display: block; font-size: 11px; font-weight: 800; margin-bottom: 2px; color: #6a1b9a; }
+        .sp-msg.mine { align-self: flex-end; background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+        .sp-msg.theirs { align-self: flex-start; background: #fff; color: #1f2937; border-bottom-left-radius: 4px; }
+        .sp-notice { align-self: center; text-align: center; font-size: 12px; color: #64748b; padding: 4px 12px; }
+        .sp-foot { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid #eef2f6; background: #fff; }
+        .sp-input { flex: 1; resize: none; border: 1px solid #dbe3ec; border-radius: 18px; padding: 10px 14px; font-family: inherit; font-size: 15px; max-height: 110px; outline: none; box-sizing: border-box; background: #f8fafc; }
+        .sp-input:focus { border-color: var(--primary); background: #fff; }
+        .sp-send { width: 42px; height: 42px; padding: 0; margin: 0; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .sp-send .material-symbols-outlined { font-size: 20px; }
+        .sp-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+        .sp-badge.open { background: #fee2e2; color: #b91c1c; }
+        .sp-badge.answered { background: #dcfce7; color: #15803d; }
+        .sp-badge.closed { background: #e5e7eb; color: #4b5563; }
+
+        /* Панель тикетов разработчика */
+        .sp-admin-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .sp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+        .sp-stat { background: #f8fafc; border: 1px solid #eef2f6; border-radius: 12px; padding: 10px; text-align: center; }
+        .sp-stat b { display: block; font-size: 20px; color: #1f2937; }
+        .sp-stat span { font-size: 11px; color: #64748b; }
+        .sp-filters { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; }
+        .sp-filter { width: auto; margin: 0; padding: 7px 12px; border-radius: 16px; font-size: 13px; background: #eef2f6; color: #475569; white-space: nowrap; }
+        .sp-filter.active { background: var(--primary); color: #fff; }
+        .sp-thread { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 14px; border: 1px solid #eef2f6; background: #fff; cursor: pointer; margin-bottom: 8px; transition: 0.15s; }
+        .sp-thread:active { transform: scale(0.98); }
+        .sp-thread.unread { border-color: #bfdbfe; background: #f0f7ff; }
+        .sp-thread .sp-avatar { background: #e3f2fd; color: var(--primary); }
+        .sp-thread-main { flex: 1; min-width: 0; }
+        .sp-thread-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .sp-thread-name { font-weight: 700; font-size: 15px; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sp-thread-time { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+        .sp-thread-poly { font-size: 11px; color: #64748b; margin: 2px 0 4px; }
+        .sp-thread-last { font-size: 13px; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sp-thread.unread .sp-thread-last { font-weight: 700; color: #1f2937; }
+        .sp-admin-chat { border: 1px solid #eef2f6; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; height: 70vh; }
+        .sp-admin-chat .sp-head { background: #fff; color: #1f2937; border-bottom: 1px solid #eef2f6; }
+        .sp-admin-chat .sp-avatar { background: #e3f2fd; color: var(--primary); }
+        .sp-admin-chat .sp-close { background: #eef2f6; color: #475569; }
+        .sp-small-btn { width: auto; margin: 0; padding: 6px 10px; font-size: 12px; border-radius: 8px; background: #eef2f6; color: #475569; flex-shrink: 0; }
         .btn-logout { background: #ffe4e6; color: #e11d48; border: none; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; margin: 0; width: auto; }
 
         /* === ВКЛАДКИ НАВИГАЦИИ === */
@@ -136,39 +191,111 @@
         .switch input:checked + .slider { background-color: var(--success); }
         .switch input:checked + .slider:before { transform: translateX(16px); }
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+/* === Кнопка "Я на линии" (Неоновая) === */
+.btn-neon {
+  margin: 15px auto;
+  display: block;
+  width: fit-content;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none;
+  cursor: pointer;
+  --border-right: 6px;
+  --text-stroke-color: rgba(33, 150, 243, 0.6);
+  --animation-color: #37FF8B;
+  --fs-size: 1.8em;
+  letter-spacing: 3px;
+  text-decoration: none;
+  font-size: var(--fs-size);
+  font-family: "Arial", sans-serif;
+  position: relative;
+  text-transform: uppercase;
+  color: transparent !important;
+  -webkit-text-stroke: 1px var(--text-stroke-color);
+}
 
+.btn-neon .hover-text {
+  position: absolute;
+  box-sizing: border-box;
+  content: attr(data-text);
+  color: var(--animation-color);
+  width: 0%;
+  inset: 0;
+  border-right: var(--border-right) solid var(--animation-color);
+  overflow: hidden;
+  transition: 0.5s;
+  -webkit-text-stroke: 1px var(--animation-color);
+  white-space: nowrap;
+}
+
+.btn-neon.active .hover-text {
+  width: 100%;
+  filter: drop-shadow(0 0 23px var(--animation-color));
+}
         /* === АНИМИРОВАННОЕ УВЕДОМЛЕНИЕ (ТОСТ) === */
-        .wrapper { position: fixed; bottom: 30px; top: auto; left: 50%; transform: translatex(-50%); pointer-events: none; z-index: 1000; }
-        .wrapper.expand > .notification-banner { opacity: 1; width: 250px; }
-        .wrapper.expand > svg.notification-icon { transform: translatex(calc(-85px - 50%)) translatey(-50%); }
-        .wrapper > .notification-banner { height: 46px; width: 46px; border-radius: 46px; background: #323232; position: absolute; top: 50%; left: 50%; overflow: hidden; opacity: 0; transform: translatex(-50%) translatey(-50%); transition-property: transform, opacity, width; transition-duration: 0.25s; display: flex; align-items: center; justify-content: center; }
-        .success-text { color: white; font-size: 15px; font-weight: 600; opacity: 0; margin-left: 24px; white-space: nowrap; transition: opacity 0.2s ease; }
-        .wrapper.expand .success-text { opacity: 1; transition-delay: 0.2s; }
-        .wrapper > svg.notification-icon { position: absolute; top: 50%; left: 50%; transform: translatex(-50%) translatey(-50%); width: 28px; height: 28px; transition-property: transform, opacity; transition-duration: 0.25s; opacity: 0; }
-        .wrapper.expand > svg.notification-icon { opacity: 1; animation: draw-and-fill 1.25s ease forwards; }
-        .cls-1 { fill: #009245; }
-        .cls-1, .cls-2 { stroke: #009245; stroke-miterlimit: 10; stroke-width: 3px; }
-        .cls-2 { fill: none; }
-        @keyframes draw-and-fill { 0% { fill-opacity: 0; stroke-dasharray: 200; stroke-dashoffset: 200; } 35% { fill-opacity: 0; } 90% { stroke-dashoffset: 0; } 100% { stroke-width: 0; fill-opacity: 1; } }
+
+        /* === НОВЫЕ УВЕДОМЛЕНИЯ СВЕРХУ СПРАВА === */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none; /* чтобы не блокировать клики под уведомлениями */
+        }
+
+        .toast {
+            min-width: 200px;
+            max-width: 300px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            pointer-events: auto;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            margin-right: 12px;
+        }
+
+        .toast-text {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        /* Цвета для разных типов */
+        .toast.green { background: #dcfce7; border-color: #22c55e; color: #166534; }
+        .toast.green svg { stroke: #16a34a; }
+
+        .toast.blue { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+        .toast.blue svg { stroke: #2563eb; }
+
+        .toast.red { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .toast.red svg { stroke: #dc2626; }
     </style>
 </head>
 <body>
 
 <!-- Обертка анимации уведомлений -->
-<div class="wrapper" id="notificationWrapper">
-    <div class="notification-banner">
-        <span class="success-text">Заявка отправлена!</span>
-    </div>
-    <svg class="notification-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 35 35">
-        <g id="Layer_2" data-name="Layer 2">
-            <g id="Layer_1-2" data-name="Layer 1">
-                <circle class="cls-1" cx="17.5" cy="17.5" r="16"/>
-                <path class="cls-2" d="M7.86,16.59l5.65,5.93Z"/>
-                <path class="cls-2" d="M14.2,25.77l13.51-13.9Z"/>
-            </g>
-        </g>
-    </svg>
-</div>
+<!-- Контейнер для уведомлений (сверху справа) -->
+<div id="toastContainer" class="toast-container"></div>
 
 <!-- Модальное окно отпусков -->
 <div id="vacationModal" class="modal-overlay">
@@ -204,12 +331,20 @@
 </div>
 
 <div id="supportModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-title">Служба поддержки 🛠️</div>
-        <p style="font-size:14px; color:#666;">Опишите вашу проблему или пожелание:</p>
-        <textarea id="supportText" rows="4" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-family:inherit; resize:vertical;"></textarea>
-        <button class="btn-success" style="margin-top:10px;" onclick="submitSupportTicket()">Отправить</button>
-        <button class="btn-secondary" onclick="document.getElementById('supportModal').style.display='none'">Отмена</button>
+    <div class="sp-sheet">
+        <div class="sp-head">
+            <div class="sp-avatar online">АП</div>
+            <div class="sp-head-info">
+                <div class="sp-head-name">Александр Прокопенко</div>
+                <div class="sp-head-sub">Разработчик X5 Planer · поддержка</div>
+            </div>
+            <button class="sp-close" onclick="closeSupportChat()">✕</button>
+        </div>
+        <div class="sp-body" id="supportChatBody"></div>
+        <div class="sp-foot">
+            <textarea id="supportText" class="sp-input" rows="1" placeholder="Напишите сообщение..." oninput="autoGrowSupportInput(this)"></textarea>
+            <button class="sp-send" onclick="submitSupportTicket()"><span class="material-symbols-outlined">send</span></button>
+        </div>
     </div>
 </div>
 
@@ -267,13 +402,15 @@
             <div id="greetingPolygon" style="font-size: 12px; color: #666; margin-top: 4px; font-weight: 600;"></div>
         </div>
         <div class="header-actions">
-            <button class="btn-support" onclick="document.getElementById('supportModal').style.display='flex'">Поддержка 💬</button>
+            <button class="btn-support" id="supportBtn" onclick="openSupportChat()">Поддержка 💬<span class="unread-dot"></span></button>
             <button class="btn-logout" onclick="logout()">Выйти</button>
         </div>
     </div>
 
-    <button id="startShiftBtn" onclick="startShift()" class="btn-success" style="display:block;">Я на линии</button>
-    <button id="endShiftBtn" onclick="endShift()" class="btn-danger" style="display:none;">Выйти с линии</button>
+    <button id="startShiftBtn" onclick="toggleShift()" class="btn-neon" data-text="&nbsp;Я НА ЛИНИИ&nbsp;">
+        <span class="actual-text">&nbsp;Я НА ЛИНИИ&nbsp;</span>
+        <span aria-hidden="true" class="hover-text">&nbsp;Я НА ЛИНИИ&nbsp;</span>
+    </button>
 
     <div class="tabs">
         <button id="tabPersonal" class="tab active" onclick="switchTab('personal')">Мои заявки</button>
@@ -426,14 +563,67 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+        function escapeHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+    }
     // --- ОФЛАЙН-ОЧЕРЕДЬ: дублируем запись в нативный слой ---
+        const NATIVE_SYNC_FALLBACK_KEY = 'pendingNativeSyncQueue';
+
     function queueForNativeSync(path, dataObj) {
+        let delivered = false;
+
         if (window.AndroidApp && window.AndroidApp.queueForSync) {
             try {
                 window.AndroidApp.queueForSync(path, JSON.stringify(dataObj));
+                delivered = true;
             } catch (e) {
                 console.log('queueForSync недоступен: ' + e.message);
             }
+        }
+
+        if (!delivered) {
+            // Нативный слой недоступен или упал — не теряем данные молча,
+            // а сохраняем их в собственную очередь и досылаем позже (см. flushNativeSyncFallbackQueue)
+            try {
+                let raw = localStorage.getItem(NATIVE_SYNC_FALLBACK_KEY);
+                let queue = raw ? JSON.parse(raw) : [];
+                queue.push({ path: path, data: dataObj, ts: Date.now() });
+                localStorage.setItem(NATIVE_SYNC_FALLBACK_KEY, JSON.stringify(queue));
+            } catch (storageErr) {
+                console.log('Не удалось сохранить в резервную очередь: ' + storageErr.message);
+            }
+        }
+    }
+
+    function flushNativeSyncFallbackQueue() {
+        if (!(window.AndroidApp && window.AndroidApp.queueForSync)) return;
+
+        let raw = localStorage.getItem(NATIVE_SYNC_FALLBACK_KEY);
+        if (!raw) return;
+
+        let queue;
+        try { queue = JSON.parse(raw); } catch (e) { queue = []; }
+        if (!queue.length) { localStorage.removeItem(NATIVE_SYNC_FALLBACK_KEY); return; }
+
+        let remaining = [];
+        queue.forEach(item => {
+            try {
+                window.AndroidApp.queueForSync(item.path, JSON.stringify(item.data));
+            } catch (e) {
+                remaining.push(item);
+            }
+        });
+
+        if (remaining.length) {
+            localStorage.setItem(NATIVE_SYNC_FALLBACK_KEY, JSON.stringify(remaining));
+        } else {
+            localStorage.removeItem(NATIVE_SYNC_FALLBACK_KEY);
         }
     }
 // ---------- ГЕОЗОНА (офлайн, без сторонних API) ----------
@@ -477,13 +667,17 @@
     let shiftWatchInterval = null;
     let isOnShift = false;
 
+    function toggleShift() {
+        if (isOnShift) { endShift(); } else { startShift(); }
+    }
+
     function startShift() {
         if (!navigator.geolocation) { showToast("GPS недоступен на этом устройстве"); return; }
         isOnShift = true;
         updateShiftButtonsUI();
         checkGeoPosition();
         shiftWatchInterval = setInterval(checkGeoPosition, 60000);
-        showToast("Вы на линии. Отслеживание зоны включено.");
+        showToast("Вы встали на линию.", "green");
         if (window.AndroidApp && window.AndroidApp.startShiftTracking) {
             window.AndroidApp.startShiftTracking();
         }
@@ -493,7 +687,7 @@
         isOnShift = false;
         if (shiftWatchInterval) { clearInterval(shiftWatchInterval); shiftWatchInterval = null; }
         updateShiftButtonsUI();
-        showToast("Вы вышли с линии.");
+        showToast("Вы вышли с линии.", "blue");
         if (window.AndroidApp && window.AndroidApp.stopShiftTracking) {
             window.AndroidApp.stopShiftTracking();
         }
@@ -504,7 +698,7 @@
             pos => {
                 let inZone = isPointInPolygon(pos.coords.latitude, pos.coords.longitude, workZonePolygon);
                 if (!inZone) {
-                    showToast("⚠️ Внимание! Вы покинули рабочую зону или произошел сбой GPS");
+                   showToast("Вы находитесь вне зоны доставки и т.п", "red");
                 }
             },
             err => { console.log('GPS ошибка: ' + err.message); },
@@ -514,16 +708,18 @@
 
     function updateShiftButtonsUI() {
         let startBtn = document.getElementById('startShiftBtn');
-        let endBtn = document.getElementById('endShiftBtn');
-        if (startBtn) startBtn.style.display = isOnShift ? 'none' : 'block';
-        if (endBtn) endBtn.style.display = isOnShift ? 'block' : 'none';
+        if (startBtn) startBtn.classList.toggle('active', isOnShift);
     }
-    function getPolyPath(poly, path) {
+
+        function getPolyPath(poly, path) {
         if (!poly) {
             console.warn('getPolyPath вызван без полигона для пути: ' + path);
             return `polygons/undefined/${path}`;
         }
-        return `polygons/${poly}/${path}`;
+        // Firebase RTDB запрещает символы . # $ [ ] в именах узлов пути —
+        // без этой замены полигон "Курск, ул. Победы, д. 74А" (есть точки в названии) ломает путь
+        let safePoly = poly.replace(/[.#$\[\]\/]/g, '_');
+        return `polygons/${safePoly}/${path}`;
     }
 
     let currentUser = { firstName: '', lastName: '', selectedDates: [], vacationDates: [], wantsFifthShift: false };
@@ -542,10 +738,13 @@
     let unlimitedWeeksData = {};
 
     let activeListeners = [];
-    function attachListener(refPath, eventType, callback) {
-        let ref = db.ref(refPath);
+          function attachListener(refOrPath, eventType, callback) {
+        // Строка — обычный путь (как раньше); объект Query/Reference — например,
+        // результат db.ref(...).orderByChild(...).equalTo(...) — используем как есть
+        let ref = (typeof refOrPath === 'string') ? db.ref(refOrPath) : refOrPath;
         ref.on(eventType, callback);
         activeListeners.push({ ref: ref, eventType: eventType, callback: callback });
+        return ref;
     }
     function detachAllListeners() {
         activeListeners.forEach(listener => {
@@ -553,8 +752,18 @@
         });
         activeListeners = [];
     }
-    function hydrateFromCache(userKey) {
+        function hydrateFromCache(userKey) {
         try {
+            let cachedVersion = parseInt(localStorage.getItem('offline_cache_version') || '0', 10);
+            if (cachedVersion !== APP_VERSION) {
+                // Кэш от другой версии приложения — структура данных могла измениться,
+                // не подмешиваем потенциально несовместимые старые поля в текущую сессию
+                console.log('Кэш устарел (версия ' + cachedVersion + ' ≠ ' + APP_VERSION + '), ждём данные из Firebase.');
+                renderCalendar();
+                renderWeeklySchedule();
+                return;
+            }
+
             const savedUsers = localStorage.getItem('offline_schedules');
             const savedSchedule = localStorage.getItem('offline_globalSchedule');
             const savedLimits = localStorage.getItem('offline_slotLimits');
@@ -578,6 +787,7 @@
 
             renderCalendar();
             renderWeeklySchedule();
+            syncShiftDatesToNative(userKey);
         } catch (e) {
             console.log('Кэш пуст или повреждён: ' + e.message);
         }
@@ -586,7 +796,16 @@
     let rainyDays = [];
     let profitableDays = {};
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-    const APP_VERSION = 8; // Обновлена версия для вызова модалки
+    const APP_VERSION = 12
+    ; // Обновлена версия для вызова модалки
+        function saveOfflineCache(key, data) {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+            localStorage.setItem('offline_cache_version', APP_VERSION);
+        } catch (e) {
+            console.log('Не удалось сохранить кэш ' + key + ': ' + e.message);
+        }
+    }
 
     const POLYGONS = [
         "Курск - Карла Маркса",
@@ -619,12 +838,50 @@
 
         setTimeout(fetchWeather, 500);
 
-        if (window.AndroidApp) {
+                if (window.AndroidApp) {
             let session = window.AndroidApp.getSession();
             if (session && session.length > 0) {
                 let parts = session.split('|');
                 if (parts.length === 4 && parts[0] && parts[0] !== 'undefined' && parts[1] && parts[1] !== 'undefined') {
-                    login(parts[0], parts[1], parts[2], parts[3]);
+                    let sFirst = parts[0], sLast = parts[1], sPoly = parts[2], sRole = parts[3];
+                    let sUserKey = sFirst + "_" + sLast;
+                    let sDeviceId = window.AndroidApp.getDeviceId ? window.AndroidApp.getDeviceId() : null;
+                    let isSuperadmin = (sFirst.toLowerCase() === 'александр' && sLast.toLowerCase() === 'прокопенко');
+
+                    // Кэш сессии мог попасть на это устройство через резервную копию/перенос данных —
+                    // прежде чем логинить автоматически, сверяем deviceId с тем, что записан в базе.
+                    //
+                    // ВАЖНО: без сети db.ref(...).once('value') у Firebase JS SDK не отклоняется
+                    // и не резолвится — она молча висит до восстановления соединения. Раньше это
+                    // означало, что courier застревал на authScreen (он active по умолчанию в
+                    // разметке), потому что login() никогда не вызывался. Поэтому: если сети нет
+                    // прямо сейчас — логинимся по локальной сессии немедленно, а если сеть вроде
+                    // есть, но проверка не отвечает дольше 4 секунд — тоже не ждём дальше.
+                    if (!navigator.onLine) {
+                        login(sFirst, sLast, sPoly, sRole);
+                        return;
+                    }
+
+                    let deviceCheck = db.ref('users_schedules/' + sUserKey + '/deviceId').once('value');
+                    let deviceCheckTimeout = new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 4000));
+
+                    Promise.race([deviceCheck, deviceCheckTimeout]).then(result => {
+                        if (result === 'TIMEOUT') {
+                            login(sFirst, sLast, sPoly, sRole);
+                            return;
+                        }
+                        let storedDeviceId = result.val();
+                        if (!storedDeviceId || storedDeviceId === sDeviceId || isSuperadmin) {
+                            login(sFirst, sLast, sPoly, sRole);
+                        } else {
+                            if (window.AndroidApp.clearSession) window.AndroidApp.clearSession();
+                            showToast("Сессия сброшена: устройство не совпадает с привязанным аккаунтом");
+                        }
+                    }).catch(() => {
+                        // Сеть пропала посреди проверки — на время оффлайна доверяем локальному кэшу,
+                        // это единственный сознательный отход от проверки
+                        login(sFirst, sLast, sPoly, sRole);
+                    });
                     return;
                 } else if (window.AndroidApp.clearSession) {
                     window.AndroidApp.clearSession();
@@ -658,89 +915,163 @@
     }
 
     // НОВАЯ ФУНКЦИЯ УВЕДОМЛЕНИЙ (АНИМИРОВАННАЯ ГАЛОЧКА)
-    function showToast(message) {
-        const wrapper = document.getElementById('notificationWrapper');
-        if (!wrapper) return;
-        wrapper.querySelector('.success-text').innerText = message;
+   // НОВАЯ ФУНКЦИЯ УВЕДОМЛЕНИЙ (СВЕРХУ СПРАВА)
+    function showToast(message, type = 'green') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
 
-        wrapper.classList.remove('expand');
-        clearTimeout(window.notificationTimer);
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
 
+                toast.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 16h-1v-4h1m0-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+            </svg>
+            <div class="toast-text">${escapeHtml(message)}</div>
+        `;
+
+        container.appendChild(toast);
+
+        // Анимация появления
+        setTimeout(() => toast.classList.add('show'), 10);
+
+        // Удаление через 3.5 секунды
         setTimeout(() => {
-            wrapper.classList.add('expand');
-        }, 50);
-
-        window.notificationTimer = setTimeout(() => {
-            wrapper.classList.remove('expand');
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400); // ждем завершения CSS анимации
         }, 3500);
     }
+// Известные случаи, когда клавиатура/автокоррекция телефона конкретного курьера
+    // стабильно искажает его имя при вводе. Настоящая запись в БД остаётся верной —
+    // здесь только нормализуем то, что человек реально набрал на экране входа.
+    // Формат ключа: "имя_фамилия" в нижнем регистре, значение — правильное имя.
+    const KNOWN_NAME_CORRECTIONS = {
+        'хуямир_филимонов': 'Владимир'
+    };
 
-    function attemptLogin() {
-        let fName = document.getElementById('firstName').value.trim();
-        let lName = document.getElementById('lastName').value.trim();
-
-        if (fName.toLowerCase() === 'хуямир' && lName.toLowerCase() === 'филимонов') {
-            fName = 'Владимир';
-        }
-
-        if(!fName || !lName) { showToast("Введите имя и фамилию"); return; }
-
-        let isSuperadmin = (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко');
-        let currentDeviceId = window.AndroidApp ? window.AndroidApp.getDeviceId() : 'web-fallback-id';
-        const userKey = fName + "_" + lName;
-
-        db.ref('users_schedules/' + userKey).once('value').then(snap => {
-            if (snap.exists()) {
-                let uData = snap.val();
-
-                if (uData.deviceId) {
-                    if (uData.deviceId !== currentDeviceId && !isSuperadmin) {
-                        showToast("Доступ заблокирован! Эта учетная запись привязана к другому устройству.");
-                        return;
-                    }
-                } else {
-                    db.ref('users_schedules/' + userKey + '/deviceId').set(currentDeviceId);
-                }
-
-                let userPoly = uData.polygon;
-                if (!userPoly) {
-                    userPoly = "Курск - Карла Маркса";
-                    db.ref('users_schedules/' + userKey + '/polygon').set(userPoly);
-                }
-
-                login(fName, lName, userPoly, uData.role || (isSuperadmin ? 'superadmin' : 'user'));
-            } else {
-                let polySelect = document.getElementById('polygonSelection');
-                let selectedPoly = document.getElementById('polygonSelect').value;
-
-                if (polySelect.style.display === 'none') {
-                    polySelect.style.display = 'block';
-                    showToast("Пожалуйста, выберите свой полигон для регистрации.");
-                    return;
-                }
-
-                if (!selectedPoly) {
-                    showToast("Выберите полигон из списка!");
-                    return;
-                }
-
-                db.ref('users_schedules/' + userKey).set({
-                    firstName: fName,
-                    lastName: lName,
-                    deviceId: currentDeviceId,
-                    polygon: selectedPoly,
-                    role: 'user',
-                    selectedDates: [],
-                    vacationDates: []
-                }).then(() => {
-                    login(fName, lName, selectedPoly, 'user');
-                });
-            }
-        }).catch(err => {
-            console.error(err);
-            showToast("Ошибка сети");
-        });
+    function applyKnownNameCorrection(fName, lName) {
+        let key = fName.toLowerCase() + '_' + lName.toLowerCase();
+        return KNOWN_NAME_CORRECTIONS[key] || null;
     }
+    function attemptLogin() {
+    let fName = document.getElementById('firstName').value.trim();
+    let lName = document.getElementById('lastName').value.trim();
+
+            fName = applyKnownNameCorrection(fName, lName) || fName;
+
+    if (!fName || !lName) { showToast("Введите имя и фамилию"); return; }
+
+    let isSuperadmin = (fName.toLowerCase() === 'александр' && lName.toLowerCase() === 'прокопенко');
+    let currentDeviceId = window.AndroidApp ? window.AndroidApp.getDeviceId() : null;
+    const userKey = fName + "_" + lName;
+
+    // Без нативного deviceId (то есть из обычного браузера) вход разрешаем только суперадмину.
+    // Иначе все "браузерные" сессии получают один и тот же id и либо перехватывают
+    // чужой аккаунт, либо навсегда занимают привязку вместо настоящего владельца.
+    if (!currentDeviceId && !isSuperadmin) {
+        showToast("Вход возможен только из мобильного приложения");
+        return;
+    }
+
+    // Найти закэшированную запись пользователя в оффлайн-кэше полигона (localStorage),
+    // если раньше на этом устройстве уже успешно логинились под этим именем.
+    function findCachedUserRecord() {
+        try {
+            let cachedUsersRaw = localStorage.getItem('offline_schedules');
+            if (!cachedUsersRaw) return null;
+            let cachedUsers = JSON.parse(cachedUsersRaw);
+            return cachedUsers[userKey] || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Нет сети прямо сейчас — не ходим в Firebase вообще (там всё равно зависнет),
+    // сразу пробуем локальный кэш этого устройства.
+    if (!navigator.onLine) {
+        let cached = findCachedUserRecord();
+        if (cached) {
+            login(fName, lName, cached.polygon || 'Курск - Карла Маркса', cached.role || (isSuperadmin ? 'superadmin' : 'user'));
+            showToast("Нет сети — вход по сохранённым данным");
+        } else {
+            showToast("Нет интернета. Для первого входа на этом устройстве нужна сеть — попробуйте, когда появится связь.");
+        }
+        return;
+    }
+
+    // Сеть вроде есть, но Firebase JS SDK может зависнуть на плохом/нестабильном соединении
+    // (once('value') не отклоняется сам по себе) — не ждём дольше 5 секунд.
+    let userLookup = db.ref('users_schedules/' + userKey).once('value');
+    let userLookupTimeout = new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 5000));
+
+    Promise.race([userLookup, userLookupTimeout]).then(snap => {
+        if (snap === 'TIMEOUT') {
+            let cached = findCachedUserRecord();
+            if (cached) {
+                login(fName, lName, cached.polygon || 'Курск - Карла Маркса', cached.role || (isSuperadmin ? 'superadmin' : 'user'));
+                showToast("Слабая связь — вход по сохранённым данным");
+            } else {
+                showToast("Слабая связь, не удалось проверить учётную запись. Попробуйте ещё раз.");
+            }
+            return;
+        }
+        if (snap.exists()) {
+            let uData = snap.val();
+
+            if (uData.deviceId) {
+                if (uData.deviceId !== currentDeviceId && !isSuperadmin) {
+                    showToast("Доступ заблокирован! Эта учетная запись привязана к другому устройству.");
+                    return;
+                }
+            } else if (currentDeviceId) {
+                db.ref('users_schedules/' + userKey + '/deviceId').set(currentDeviceId);
+            }
+
+            let userPoly = uData.polygon;
+            if (!userPoly) {
+                userPoly = "Курск - Карла Маркса";
+                db.ref('users_schedules/' + userKey + '/polygon').set(userPoly);
+            }
+
+            login(fName, lName, userPoly, uData.role || (isSuperadmin ? 'superadmin' : 'user'));
+        } else {
+            let polySelect = document.getElementById('polygonSelection');
+            let selectedPoly = document.getElementById('polygonSelect').value;
+
+            if (polySelect.style.display === 'none') {
+                polySelect.style.display = 'block';
+                showToast("Пожалуйста, выберите свой полигон для регистрации.");
+                return;
+            }
+
+            if (!selectedPoly) {
+                showToast("Выберите полигон из списка!");
+                return;
+            }
+
+            db.ref('users_schedules/' + userKey).set({
+                firstName: fName,
+                lastName: lName,
+                deviceId: currentDeviceId,
+                polygon: selectedPoly,
+                role: 'user',
+                selectedDates: [],
+                vacationDates: []
+            }).then(() => {
+                login(fName, lName, selectedPoly, 'user');
+            });
+        }
+    }).catch(err => {
+        console.error(err);
+        let cached = findCachedUserRecord();
+        if (cached) {
+            login(fName, lName, cached.polygon || 'Курск - Карла Маркса', cached.role || (isSuperadmin ? 'superadmin' : 'user'));
+            showToast("Нет сети — вход по сохранённым данным");
+        } else {
+            showToast("Ошибка сети");
+        }
+    });
+}
 
     function login(fName, lName, polygon, role) {
         detachAllListeners();
@@ -753,9 +1084,15 @@
             window.AndroidApp.saveSession(fName, lName, polygon, role);
         }
 
-        localStorage.setItem('plannerFirst', fName);
-        localStorage.setItem('plannerLast', lName);
-        localStorage.setItem('plannerPolygon', polygon);
+                // Эти ключи читаются только в web-fallback ветке восстановления сессии (см. блок
+        // window.AndroidApp / else в самом начале файла) — в приложении они не нужны
+        // и только лишний раз кладут данные пользователя в localStorage, откуда их может
+        // прочитать любой сторонний скрипт на странице.
+        if (!window.AndroidApp) {
+            localStorage.setItem('plannerFirst', fName);
+            localStorage.setItem('plannerLast', lName);
+            localStorage.setItem('plannerPolygon', polygon);
+        }
 
         let appVer = 'Старое/Веб';
         if (window.AndroidApp) {
@@ -840,7 +1177,7 @@
                     let tabDiv = document.createElement('div');
                     tabDiv.id = 'supportAdminTab';
                     tabDiv.style.display = 'none';
-                    tabDiv.innerHTML = `<div class="card" style="background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px;"><h3 style="margin-top:0; border-bottom: 2px solid var(--primary); padding-bottom: 12px; color: #222;">Обращения в поддержку</h3><div id="supportTicketsList" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">Загрузка...</div></div>`;
+                    tabDiv.innerHTML = `<div class="card" id="supportTicketsList">Загрузка...</div>`;
                     document.getElementById('mainScreen').appendChild(tabDiv);
                 }
                 loadSupportTickets();
@@ -874,12 +1211,15 @@
             resolveFifthShiftQueue();
         });
 
-        attachListener('users_schedules', 'value', snap => {
+                let usersRef = (role === 'superadmin')
+            ? db.ref('users_schedules') // суперадмину нужен весь список — сетевой дашборд, поиск сотрудников по всем полигонам
+            : db.ref('users_schedules').orderByChild('polygon').equalTo(polygon); // остальным — только свой полигон
+
+        attachListener(usersRef, 'value', snap => {
             const data = snap.val() || {};
 
             // Сохраняем копию всех смен в память телефона
-            localStorage.setItem('offline_schedules', JSON.stringify(data));
-
+            saveOfflineCache('offline_schedules', data);
             globalUsersData = data;
             if (isAdmin) loadEmployees();
             resolveFifthShiftQueue();
@@ -888,25 +1228,24 @@
         checkOnboardingAndChangelog(role);
 
         let poly = currentUser.polygon;
-        attachListener(getPolyPath(poly, `slot_limits`), 'value', snap => { slotLimitsData = snap.val() || {}; localStorage.setItem('offline_slotLimits', JSON.stringify(slotLimitsData)); renderCalendar(); renderWeeklySchedule(); });
-        attachListener(getPolyPath(poly, `profitable_days`), 'value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
+        attachListener(getPolyPath(poly, `slot_limits`), 'value', snap => { slotLimitsData = snap.val() || {}; saveOfflineCache('offline_slotLimits', slotLimitsData); renderCalendar(); renderWeeklySchedule(); });        attachListener(getPolyPath(poly, `profitable_days`), 'value', snap => { profitableDays = snap.val() || {}; renderCalendar(); renderProfitableList(); });
         attachListener(getPolyPath(poly, `fifth_shift_history`), 'value', snap => { fifthShiftHistoryData = snap.val() || {}; });
        attachListener(getPolyPath(poly, `unlimited_weeks`), 'value', snap => {
             unlimitedWeeksData = snap.val() || {};
-            localStorage.setItem('offline_unlimited_weeks', JSON.stringify(unlimitedWeeksData));
-            renderUnlimitedToggle();
+            saveOfflineCache('offline_unlimited_weeks', unlimitedWeeksData);            renderUnlimitedToggle();
         });
        attachListener(getPolyPath(poly, `final_schedule`), 'value', (snapshot) => {
             globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
 
             // СОХРАНЯЕМ ГРАФИК В ПАМЯТЬ ТЕЛЕФОНА
-            localStorage.setItem('offline_globalSchedule', JSON.stringify(globalSchedule));
-
+            saveOfflineCache('offline_globalSchedule', globalSchedule);
             renderWeeklySchedule();
-            checkEveningReport(userKey, isAdmin);
+            syncShiftDatesToNative(userKey);
+            checkEveningReport(userKey);
         });
 
         listenForVacationOffers();
+        listenMySupportThread();
     }
 
     function checkOnboardingAndChangelog(role) {
@@ -918,12 +1257,9 @@
         } else if (lastSeenVersion < APP_VERSION) {
             let cl = document.getElementById('changelogContent');
             cl.innerHTML = `<ul>
-                <li><b>Новый дизайн:</b> Полностью обновлен календарь и карточки отпусков!</li>
-                <li><b>Умные слоты:</b> Теперь свободные места на смене отображаются точками под датой.</li>
-                <li><b>Погода:</b> Дождливые дни подсвечиваются синим цветом с новой иконкой тучи.</li>
-                <li><b>Уведомления:</b> Добавлены плавные анимации сохранения данных.</li>
-                <li><b>🌐 Полный Оффлайн:</b> Теперь график смен и занятые места отображаются даже без интернета!</li>
-                <li><b>🔄 Умная синхронизация:</b> Отмечайте смены там и ОТЧЕТЫ, где нет сети. Данные сами отправятся в базу, как только появится связь.</li>
+                <li><b>🔔 Напоминания об отчёте:</b> Теперь приходят только в те дни, когда у вас стоит смена.</li>
+                <li><b>💬 Новая поддержка:</b> Удобный чат с разработчиком — видно историю переписки и ответы прямо в приложении.</li>
+                <li><b>🔄 Обновления:</b> Новые версии приложения теперь скачиваются и устанавливаются надёжнее.</li>
             </ul>`;
             document.getElementById('changelogModal').style.display = 'flex';
         }
@@ -940,47 +1276,289 @@
         document.getElementById('changelogModal').style.display = 'none';
     };
 
-    window.submitSupportTicket = function() {
-        let text = document.getElementById('supportText').value.trim();
-        if (!text) return;
-        let userKey = currentUser.firstName + "_" + currentUser.lastName;
-        let poly = currentUser.polygon;
-        db.ref(getPolyPath(poly, `support_tickets`)).push({
-            userKey: userKey,
-            name: currentUser.firstName + " " + currentUser.lastName,
-            polygon: poly,
-            message: text,
-            timestamp: Date.now()
-        }).then(() => {
-            showToast("Обращение отправлено!");
-            document.getElementById('supportText').value = "";
-            document.getElementById('supportModal').style.display = 'none';
-        }).catch(err => {
-            showToast("Ошибка при отправке: " + err.message);
+    // ---------- ПОДДЕРЖКА (ЧАТ С РАЗРАБОТЧИКОМ) ----------
+    // polygons/{poly}/support_tickets/{userKey}: { userKey, name, polygon, appVersion, status: open|answered|closed,
+    //   lastUpdate, lastText, adminUnread, userUnread, messages: { id: { from: user|admin, text, timestamp } } }
+    // Старые обращения (push-ключ с полем message) показываются в панели разработчика как переписка из одного сообщения.
+    // Почта: в Firebase support_config/emailWebhookUrl — адрес веб-приложения Google Apps Script (support-mailer/Code.gs).
+    const SUPPORT_EMAIL_TOKEN = 'x5planer-support-v1';
+    let mySupportThread = null;
+    let supportTicketsByPoly = {};
+    let supportAdminFilter = 'all';
+    let supportAdminOpenId = null;
+    let supportAdminListening = false;
+    let supportAdminVisibleIds = [];
+
+    function supportInitials(name) {
+        return String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+    }
+
+    function supportThreadMessages(t) {
+        let list = [];
+        if (t.message) list.push({ from: 'user', text: t.message, timestamp: t.timestamp || 0 });
+        Object.values(t.messages || {}).forEach(m => list.push(m));
+        return list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    }
+
+    function supportStatusLabel(status) {
+        if (status === 'answered') return '<span class="sp-badge answered">Отвечено</span>';
+        if (status === 'closed') return '<span class="sp-badge closed">Закрыто</span>';
+        return '<span class="sp-badge open">Новое</span>';
+    }
+
+    function formatSupportTime(ts) {
+        let d = new Date(ts);
+        let now = new Date();
+        let sameDay = d.toDateString() === now.toDateString();
+        return sameDay ? d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+                       : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+
+    // Рисует пузырьки сообщений; mineFrom — чьи сообщения показывать справа
+    function renderSupportMessages(container, messages, mineFrom) {
+        let html = '';
+        let lastDay = '';
+        messages.forEach(m => {
+            let d = new Date(m.timestamp || 0);
+            let dayLabel = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+            if (dayLabel !== lastDay) { html += `<div class="sp-day">${dayLabel}</div>`; lastDay = dayLabel; }
+            let mine = m.from === mineFrom;
+            let author = (!mine && m.from === 'admin') ? '<span class="sp-author">Александр Прокопенко</span>' : '';
+            let time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            html += `<div class="sp-msg ${mine ? 'mine' : 'theirs'}">${author}${escapeHtml(m.text)}<span class="sp-time">${time}</span></div>`;
         });
+        container.innerHTML = html;
+        container.scrollTop = container.scrollHeight;
+    }
+
+    window.autoGrowSupportInput = function(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 110) + 'px';
     };
 
-    function loadSupportTickets() {
-        let poly = currentUser.polygon;
-        db.ref(getPolyPath(poly, `support_tickets`)).on('value', snap => {
-            let data = snap.val();
-            let container = document.getElementById('supportTicketsList');
-            if (!container) return;
-            if (!data) { container.innerHTML = "<p style='color:#888;'>Нет обращений в этом полигоне.</p>"; return; }
+    function getMySupportRef() {
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        return db.ref(getPolyPath(currentUser.polygon, `support_tickets/${userKey}`));
+    }
 
-            let html = "";
-            let keys = Object.keys(data).sort((a,b) => data[b].timestamp - data[a].timestamp);
-            keys.forEach(k => {
-                let t = data[k];
-                let date = new Date(t.timestamp).toLocaleString('ru-RU');
-                html += `<div style="background:#f9f9f9; padding:12px; margin-bottom:8px; border-left:3px solid var(--danger); border-radius:4px;">
-                    <div style="font-size:12px; color:#888;">${date} - <b>${t.name}</b></div>
-                    <div style="margin-top:6px; font-size:14px;">${t.message}</div>
-                </div>`;
-            });
-            container.innerHTML = html;
+    function listenMySupportThread() {
+        attachListener(getPolyPath(currentUser.polygon, `support_tickets/${currentUser.firstName}_${currentUser.lastName}`), 'value', snap => {
+            mySupportThread = snap.val();
+            let btn = document.getElementById('supportBtn');
+            if (btn) btn.classList.toggle('has-unread', !!(mySupportThread && mySupportThread.userUnread));
+            if (document.getElementById('supportModal').style.display === 'flex') renderMySupportChat();
         });
     }
+
+    function renderMySupportChat() {
+        let body = document.getElementById('supportChatBody');
+        let greeting = `<div class="sp-msg theirs"><span class="sp-author">Александр Прокопенко</span>Здравствуйте, ${escapeHtml(currentUser.firstName)}! 👋\nОпишите проблему или пожелание — сообщение сразу придёт мне, и я отвечу здесь же.</div>`;
+        let messages = mySupportThread ? supportThreadMessages(mySupportThread) : [];
+        renderSupportMessages(body, messages, 'user');
+        body.innerHTML = greeting + body.innerHTML;
+        if (mySupportThread && mySupportThread.status === 'closed') {
+            body.innerHTML += `<div class="sp-notice">Обращение закрыто. Напишите, если вопрос остался — оно откроется снова.</div>`;
+        }
+        body.scrollTop = body.scrollHeight;
+    }
+
+    window.openSupportChat = function() {
+        document.getElementById('supportModal').style.display = 'flex';
+        renderMySupportChat();
+        if (mySupportThread && mySupportThread.userUnread) getMySupportRef().update({ userUnread: false });
+    };
+
+    window.closeSupportChat = function() {
+        document.getElementById('supportModal').style.display = 'none';
+    };
+
+    window.submitSupportTicket = function() {
+        let input = document.getElementById('supportText');
+        let text = input.value.trim();
+        if (!text) return;
+        let userKey = currentUser.firstName + "_" + currentUser.lastName;
+        let name = currentUser.firstName + " " + currentUser.lastName;
+        let poly = currentUser.polygon;
+        let appVer = window.AndroidApp ? 'v' + window.AndroidApp.getAppVersion() : 'Веб';
+        let now = Date.now();
+        let ref = getMySupportRef();
+
+        ref.update({
+            userKey: userKey, name: name, polygon: poly, appVersion: appVer,
+            status: 'open', lastUpdate: now, lastText: text, adminUnread: true
+        }).then(() => ref.child('messages').push({ from: 'user', text: text, timestamp: now }))
+          .then(() => {
+              input.value = '';
+              autoGrowSupportInput(input);
+              sendSupportEmail({ name: name, userKey: userKey, polygon: poly, appVersion: appVer, text: text, timestamp: now });
+          }).catch(err => {
+              showToast("Ошибка при отправке: " + err.message);
+          });
+    };
+
+    // Письмо разработчику — отправляет само приложение через веб-приложение Google Apps Script
+    function sendSupportEmail(payload) {
+        db.ref('support_config/emailWebhookUrl').once('value').then(snap => {
+            let url = snap.val();
+            if (!url) return;
+            payload.token = SUPPORT_EMAIL_TOKEN;
+            // text/plain + no-cors: простой запрос без preflight, Apps Script его принимает
+            return fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+        }).catch(err => console.log('Письмо в поддержку не отправлено: ' + err.message));
+    }
+
+    // Панель разработчика: обращения со всех полигонов
+    function loadSupportTickets() {
+        if (supportAdminListening) { renderSupportAdmin(); return; }
+        supportAdminListening = true;
+        POLYGONS.forEach(p => {
+            db.ref(getPolyPath(p, `support_tickets`)).on('value', snap => {
+                supportTicketsByPoly[p] = snap.val() || {};
+                renderSupportAdmin();
+            });
+        });
+    }
+
+    function getAllSupportThreads() {
+        let list = [];
+        Object.keys(supportTicketsByPoly).forEach(p => {
+            let tickets = supportTicketsByPoly[p];
+            Object.keys(tickets).forEach(id => {
+                let t = tickets[id];
+                let msgs = supportThreadMessages(t);
+                let last = msgs[msgs.length - 1] || {};
+                list.push({
+                    id: p + '|' + id, poly: p, key: id, data: t, messages: msgs,
+                    status: t.status || 'open',
+                    name: t.name || id,
+                    lastUpdate: t.lastUpdate || last.timestamp || t.timestamp || 0,
+                    lastText: last.text || '',
+                    lastFromAdmin: last.from === 'admin',
+                    unread: t.adminUnread !== undefined ? !!t.adminUnread : !t.status
+                });
+            });
+        });
+        return list.sort((a, b) => b.lastUpdate - a.lastUpdate);
+    }
+
+    function renderSupportAdmin() {
+        let container = document.getElementById('supportTicketsList');
+        if (!container) return;
+        let threads = getAllSupportThreads();
+
+        if (supportAdminOpenId) {
+            let t = threads.find(x => x.id === supportAdminOpenId);
+            if (t) {
+                renderSupportAdminChat(container, t);
+                // Пришло новое сообщение, пока переписка открыта — сразу считаем прочитанным
+                if (t.data.adminUnread) getOpenSupportAdminRef().update({ adminUnread: false });
+                return;
+            }
+            supportAdminOpenId = null;
+        }
+
+        let counts = { open: 0, answered: 0, closed: 0 };
+        threads.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+        let filtered = supportAdminFilter === 'all' ? threads : threads.filter(t => t.status === supportAdminFilter);
+        let filterBtn = (key, label) => `<button class="sp-filter ${supportAdminFilter === key ? 'active' : ''}" onclick="setSupportAdminFilter('${key}')">${label}</button>`;
+
+        let html = `<div class="sp-admin-top">
+                <div class="sp-avatar online" style="background: linear-gradient(135deg, #1e88e5, #6a1b9a); color:#fff;">АП</div>
+                <div><div style="font-weight:800; font-size:17px; color:#1f2937;">Обращения в поддержку</div>
+                <div style="font-size:12px; color:#64748b;">Александр Прокопенко · все полигоны</div></div>
+            </div>
+            <div class="sp-stats">
+                <div class="sp-stat"><b>${counts.open || 0}</b><span>Новые</span></div>
+                <div class="sp-stat"><b>${counts.answered || 0}</b><span>Отвечено</span></div>
+                <div class="sp-stat"><b>${counts.closed || 0}</b><span>Закрыто</span></div>
+            </div>
+            <div class="sp-filters">${filterBtn('all', 'Все')}${filterBtn('open', 'Новые')}${filterBtn('answered', 'Отвеченные')}${filterBtn('closed', 'Закрытые')}</div>`;
+
+        if (filtered.length === 0) {
+            html += `<p style="color:#94a3b8; text-align:center; padding:24px 0;">Обращений нет 🎉</p>`;
+        } else {
+            supportAdminVisibleIds = filtered.map(t => t.id);
+            filtered.forEach((t, i) => {
+                html += `<div class="sp-thread ${t.unread ? 'unread' : ''}" onclick="openSupportAdminThread(${i})">
+                    <div class="sp-avatar">${escapeHtml(supportInitials(t.name))}</div>
+                    <div class="sp-thread-main">
+                        <div class="sp-thread-row"><span class="sp-thread-name">${t.unread ? '🔵 ' : ''}${escapeHtml(t.name)}</span><span class="sp-thread-time">${formatSupportTime(t.lastUpdate)}</span></div>
+                        <div class="sp-thread-poly">${escapeHtml(t.poly)}</div>
+                        <div class="sp-thread-row"><span class="sp-thread-last">${t.lastFromAdmin ? 'Вы: ' : ''}${escapeHtml(t.lastText)}</span>${supportStatusLabel(t.status)}</div>
+                    </div>
+                </div>`;
+            });
+        }
+        container.innerHTML = html;
+    }
+
+    function renderSupportAdminChat(container, t) {
+        let draft = document.getElementById('supportAdminReply');
+        let draftText = draft ? draft.value : '';
+        let toggleBtn = t.status === 'closed'
+            ? `<button class="sp-small-btn" onclick="setSupportThreadStatus('open')">Открыть</button>`
+            : `<button class="sp-small-btn" onclick="setSupportThreadStatus('closed')">Закрыть</button>`;
+
+        container.innerHTML = `<div class="sp-admin-chat">
+            <div class="sp-head">
+                <button class="sp-close" onclick="closeSupportAdminThread()">←</button>
+                <div class="sp-avatar">${escapeHtml(supportInitials(t.name))}</div>
+                <div class="sp-head-info">
+                    <div class="sp-head-name">${escapeHtml(t.name)}</div>
+                    <div class="sp-head-sub" style="color:#64748b;">${escapeHtml(t.poly)}${t.data.appVersion ? ' · ' + escapeHtml(t.data.appVersion) : ''}</div>
+                </div>
+                ${toggleBtn}
+            </div>
+            <div class="sp-body" id="supportAdminBody"></div>
+            <div class="sp-foot">
+                <textarea id="supportAdminReply" class="sp-input" rows="1" placeholder="Ответ пользователю..." oninput="autoGrowSupportInput(this)"></textarea>
+                <button class="sp-send" onclick="sendSupportAdminReply()"><span class="material-symbols-outlined">send</span></button>
+            </div>
+        </div>`;
+        renderSupportMessages(document.getElementById('supportAdminBody'), t.messages, 'admin');
+        let reply = document.getElementById('supportAdminReply');
+        reply.value = draftText;
+        autoGrowSupportInput(reply);
+    }
+
+    function getOpenSupportAdminRef() {
+        if (!supportAdminOpenId) return null;
+        let sep = supportAdminOpenId.indexOf('|');
+        return db.ref(getPolyPath(supportAdminOpenId.slice(0, sep), `support_tickets/${supportAdminOpenId.slice(sep + 1)}`));
+    }
+
+    window.setSupportAdminFilter = function(f) { supportAdminFilter = f; renderSupportAdmin(); };
+
+    window.openSupportAdminThread = function(index) {
+        supportAdminOpenId = supportAdminVisibleIds[index];
+        renderSupportAdmin();
+        let ref = getOpenSupportAdminRef();
+        if (ref) ref.update({ adminUnread: false });
+    };
+
+    window.closeSupportAdminThread = function() {
+        let draft = document.getElementById('supportAdminReply');
+        if (draft) draft.value = '';
+        supportAdminOpenId = null;
+        renderSupportAdmin();
+    };
+
+    window.setSupportThreadStatus = function(status) {
+        let ref = getOpenSupportAdminRef();
+        if (ref) ref.update({ status: status });
+    };
+
+    window.sendSupportAdminReply = function() {
+        let input = document.getElementById('supportAdminReply');
+        let text = input.value.trim();
+        let ref = getOpenSupportAdminRef();
+        if (!text || !ref) return;
+        let now = Date.now();
+        input.value = '';
+        ref.child('messages').push({ from: 'admin', text: text, timestamp: now })
+            .then(() => ref.update({ status: 'answered', lastUpdate: now, lastText: text, userUnread: true, adminUnread: false }))
+            .catch(err => { input.value = text; showToast("Ошибка при отправке: " + err.message); });
+    };
 
     function toggleFifthShiftPreference(el) {
         let isChecked = el.checked;
@@ -1065,10 +1643,9 @@
         if (currentMode === 'shift') {
             if (vacIndex > -1) { currentUser.vacationDates.splice(vacIndex, 1); element.classList.remove('vacation'); }
 
-            if (shiftIndex > -1) {
+                        if (shiftIndex > -1) {
                 currentUser.selectedDates.splice(shiftIndex, 1);
                 element.classList.remove('selected');
-                renderCalendar();
             } else {
                 let targetWeek = getWeekKey(dateStr);
                let shiftsInWeek = currentUser.selectedDates.filter(d => getWeekKey(d) === targetWeek).length;
@@ -1096,15 +1673,13 @@
                 }
 
                 // Если код дошел сюда (безлимитная неделя или лимиты не превышены) — добавляем смену
-                currentUser.selectedDates.push(dateStr);
+                                currentUser.selectedDates.push(dateStr);
                 element.classList.add('selected');
-                renderCalendar();ц
             }
-        } else if (currentMode === 'vacation') {
+                } else if (currentMode === 'vacation') {
             if (shiftIndex > -1) { currentUser.selectedDates.splice(shiftIndex, 1); element.classList.remove('selected'); }
             if (vacIndex > -1) { currentUser.vacationDates.splice(vacIndex, 1); element.classList.remove('vacation'); }
             else { currentUser.vacationDates.push(dateStr); element.classList.add('vacation'); }
-            renderCalendar();
 
             if (vacIndex === -1) {
                 initiateVacationOffer(dateStr);
@@ -1140,62 +1715,64 @@
         });
     }
 
-    function resolveFifthShiftQueue() {
-        if (!globalUsersData || Object.keys(globalUsersData).length === 0) return;
+   function resolveFifthShiftQueue() {
+    if (!globalUsersData || Object.keys(globalUsersData).length === 0) return;
 
-        let d = new Date();
-        let dayOfWeek = d.getDay();
+    let d = getMoscowNow();
+    let dayOfWeek = d.getUTCDay();
 
-        if (dayOfWeek === 6 || dayOfWeek === 0) {
-            d.setDate(d.getDate() + 3);
+    if (dayOfWeek === 6 || dayOfWeek === 0) {
+        d.setUTCDate(d.getUTCDate() + 3);
+    }
+
+    let targetWeek = getWeekKey(`${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}`);
+
+    if (dayOfWeek !== 6 && dayOfWeek !== 0 && dayOfWeek !== 1) {
+        document.getElementById('fifthShiftWinnerWidget').style.display = 'none';
+        return;
+    }
+
+    db.ref(getPolyPath(currentUser.polygon, `fifth_shift_history`)).once('value').then(snap => {
+        let history = snap.val() || {};
+
+        let candidates = [];
+        for (let k in globalUsersData) {
+            let u = globalUsersData[k];
+            if (u.polygon === currentUser.polygon && u.wantsFifthShift) {
+                candidates.push(k);
+            }
         }
 
-        let targetWeek = getWeekKey(d.toISOString().split('T')[0]);
+        candidates.sort();
 
-        if (dayOfWeek !== 6 && dayOfWeek !== 0 && dayOfWeek !== 1) {
+        if (candidates.length === 0) {
             document.getElementById('fifthShiftWinnerWidget').style.display = 'none';
             return;
         }
 
-        db.ref(getPolyPath(currentUser.polygon, `fifth_shift_history`)).once('value').then(snap => {
-            let history = snap.val() || {};
+        if (!history[targetWeek]) {
+            // Индекс инкрементируем ОДИН раз, атомарно, прямо внутри transaction —
+            // без отдельного .set() после, который и вызывал двойной инкремент.
+            db.ref(getPolyPath(currentUser.polygon, `fifth_shift_queue_index`)).transaction(function (currentIndex) {
+                return (currentIndex || 0) + 1;
+            }, function (err, committed, idxSnap) {
+                if (err || !committed) return;
 
-            let candidates = [];
-            for (let k in globalUsersData) {
-                let u = globalUsersData[k];
-                if (u.polygon === currentUser.polygon && u.wantsFifthShift) {
-                    candidates.push(k);
-                }
-            }
+                let newIdx = idxSnap.val() || 1;
+                let cIdx = newIdx - 1; // индекс, зарезервированный именно для этого вызова
+                let winner = candidates[cIdx % candidates.length];
 
-            candidates.sort();
-
-            if (candidates.length === 0) {
-                document.getElementById('fifthShiftWinnerWidget').style.display = 'none';
-                return;
-            }
-
-            if (!history[targetWeek]) {
-                db.ref(getPolyPath(currentUser.polygon, `fifth_shift_queue_index`)).transaction(function(currentIndex) {
-                    return currentIndex || 0;
-                }, function(err, committed, idxSnap) {
-                    let cIdx = idxSnap.val() || 0;
-                    let winner = candidates[cIdx % candidates.length];
-
-                    db.ref(getPolyPath(currentUser.polygon, `fifth_shift_history/${targetWeek}`)).transaction(function(cur) {
-                        return cur === null ? winner : cur;
-                    }, function(e, c, s) {
-                        if (c) {
-                            db.ref(getPolyPath(currentUser.polygon, `fifth_shift_queue_index`)).set(cIdx + 1);
-                        }
-                        updateFifthShiftWidget(s.val());
-                    });
+                db.ref(getPolyPath(currentUser.polygon, `fifth_shift_history/${targetWeek}`)).transaction(function (cur) {
+                    return cur === null ? winner : cur;
+                }, function (e, c, s) {
+                    updateFifthShiftWidget(s.val());
                 });
-            } else {
-                updateFifthShiftWidget(history[targetWeek]);
-            }
-        });
-    }
+            });
+        } else {
+            updateFifthShiftWidget(history[targetWeek]);
+        }
+    });
+}
 
     function updateFifthShiftWidget(winnerKey) {
         let widget = document.getElementById('fifthShiftWinnerWidget');
@@ -1401,41 +1978,45 @@
     }
 
     function saveData() {
-        const userKey = currentUser.firstName + "_" + currentUser.lastName;
-        let poly = currentUser.polygon;
-        let appVer = window.AndroidApp ? 'v' + window.AndroidApp.getAppVersion() : 'Старое/Веб';
+    const userKey = currentUser.firstName + "_" + currentUser.lastName;
+    let poly = currentUser.polygon;
+    let appVer = window.AndroidApp ? 'v' + window.AndroidApp.getAppVersion() : 'Старое/Веб';
 
-        let userUpdatePayload = {
-            firstName: currentUser.firstName,
-            lastName: currentUser.lastName,
-            selectedDates: currentUser.selectedDates,
-            vacationDates: currentUser.vacationDates,
-            extraShiftsAllowed: currentUser.extraShiftsAllowed || {},
-            appVersion: appVer
-        };
+    let userUpdatePayload = {
+        firstName: currentUser.firstName,
+        lastName: currentUser.lastName,
+        selectedDates: currentUser.selectedDates,
+        vacationDates: currentUser.vacationDates,
+        extraShiftsAllowed: currentUser.extraShiftsAllowed || {},
+        appVersion: appVer
+    };
 
-        db.ref('users_schedules/' + userKey).update(userUpdatePayload).catch(error => console.log("Ошибка: " + error.message));
+    db.ref('users_schedules/' + userKey).update(userUpdatePayload).catch(error => console.log("Ошибка: " + error.message));
 
-        if (!navigator.onLine) {
-            queueForNativeSync('users_schedules/' + userKey, userUpdatePayload);
-        }
+    if (!navigator.onLine) {
+        queueForNativeSync('users_schedules/' + userKey, userUpdatePayload);
+    }
 
-        let schedule = globalSchedule;
+    let schedulePath = getPolyPath(poly, 'final_schedule');
+    let selectedDates = currentUser.selectedDates.slice();
+
+    db.ref(schedulePath).transaction(function (currentSchedule) {
+        let schedule = currentSchedule || {};
         if (!schedule.approved) schedule.approved = {};
         if (!schedule.unplanned) schedule.unplanned = {};
 
         for (let dateStr in schedule.approved) {
-            if (!currentUser.selectedDates.includes(dateStr)) {
-                schedule.approved[dateStr] = schedule.approved[dateStr].filter(w => w !== userKey);
+            if (!selectedDates.includes(dateStr)) {
+                schedule.approved[dateStr] = (schedule.approved[dateStr] || []).filter(w => w !== userKey);
             }
         }
         for (let dateStr in schedule.unplanned) {
-            if (!currentUser.selectedDates.includes(dateStr)) {
-                schedule.unplanned[dateStr] = schedule.unplanned[dateStr].filter(w => w !== userKey);
+            if (!selectedDates.includes(dateStr)) {
+                schedule.unplanned[dateStr] = (schedule.unplanned[dateStr] || []).filter(w => w !== userKey);
             }
         }
 
-        currentUser.selectedDates.forEach(dateStr => {
+        selectedDates.forEach(dateStr => {
             let limit = slotLimitsData[dateStr] || 3;
             if (!schedule.approved[dateStr]) schedule.approved[dateStr] = [];
             if (!schedule.unplanned[dateStr]) schedule.unplanned[dateStr] = [];
@@ -1456,21 +2037,28 @@
             }
         }
 
-        let approvedPath = getPolyPath(poly, 'final_schedule/approved');
-        let unplannedPath = getPolyPath(poly, 'final_schedule/unplanned');
+        return schedule;
+    }, function (error, committed, snapshot) {
+        if (error) {
+            console.log("Ошибка транзакции saveData: " + error.message);
+            showToast("Ошибка сохранения, попробуйте ещё раз", "red");
+            return;
+        }
+        if (!committed) return;
 
-        db.ref(approvedPath).set(schedule.approved).catch(e => console.log(e));
-        db.ref(unplannedPath).set(schedule.unplanned).catch(e => console.log(e));
+        globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
+        localStorage.setItem('offline_globalSchedule', JSON.stringify(globalSchedule));
 
         if (!navigator.onLine) {
-            queueForNativeSync(approvedPath, schedule.approved);
-            queueForNativeSync(unplannedPath, schedule.unplanned);
+            queueForNativeSync(schedulePath, globalSchedule);
             showToast("Заявки сохранены (оффлайн)!");
         } else {
             showToast("Заявки сохранены!");
         }
-        switchTab('general');
-    }
+    });
+
+    switchTab('general');
+}
 
 function setToggle(groupId, isYes) {
     let btns = document.getElementById(groupId).getElementsByClassName('toggle-btn');
@@ -1479,29 +2067,45 @@ function setToggle(groupId, isYes) {
     if(groupId === 'tglGPS') reportData.gps = isYes;
     if(groupId === 'tglBreak') reportData.break = isYes;
 }
-function getTodayDateStr() {
-    let d = new Date();
-    let moscowTime = new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + (3600000 * 3));
-    return moscowTime.toISOString().split('T')[0];
+function getMoscowNow() {
+    return new Date(Date.now() + 3 * 3600000);
 }
 
-function checkEveningReport(userKey, skipScheduleCheck) {
+function getTodayDateStr() {
+    let m = getMoscowNow();
+    let mm = (m.getUTCMonth() + 1).toString().padStart(2, '0');
+    let dd = m.getUTCDate().toString().padStart(2, '0');
+    return `${m.getUTCFullYear()}-${mm}-${dd}`;
+}
+
+// Передаёт в нативный слой даты, где пользователь стоит в смене, — напоминания приходят только в эти дни
+function syncShiftDatesToNative(userKey) {
+    if (!window.AndroidApp || !window.AndroidApp.setShiftDates) return;
+    let approved = globalSchedule.approved || {};
+    let myDates = Object.keys(approved).filter(dateStr => (approved[dateStr] || []).includes(userKey));
+    try {
+        window.AndroidApp.setShiftDates(JSON.stringify(myDates));
+    } catch (e) {
+        console.log('setShiftDates недоступен: ' + e.message);
+    }
+}
+
+function checkEveningReport(userKey) {
     let todayStr = getTodayDateStr();
-    let d = new Date();
-    let moscowTime = new Date(d.getTime() + (d.getTimezoneOffset() * 60000) + (3600000 * 3));
+    let moscowTime = getMoscowNow();
 
     let approvedWorkers = (globalSchedule.approved && globalSchedule.approved[todayStr]) ? globalSchedule.approved[todayStr] : [];
-    // Отчёт касается всех: админы/суперадмины сдают его, даже если формально не в списке смены
-    if (skipScheduleCheck || approvedWorkers.includes(userKey)) {
+    // Отчёт сдают только те, у кого сегодня стоит смена
+    if (approvedWorkers.includes(userKey)) {
         let isReportSent = localStorage.getItem(`report_sent_${todayStr}_${userKey}`);
 
         if (!isReportSent) {
-            let hour = moscowTime.getHours();
+            let hour = moscowTime.getUTCHours();
 
             if (hour >= 20 && hour < 24) {
-                if (!sessionStorage.getItem('eveningPushSent_' + todayStr)) {
+                if (!localStorage.getItem('eveningPushSent_' + todayStr)) {
                     showToast("🔔 Не забудь проставить отчет за сегодня!");
-                    sessionStorage.setItem('eveningPushSent_' + todayStr, 'true');
+                    localStorage.setItem('eveningPushSent_' + todayStr, 'true');
                 }
                 document.getElementById('reportModal').style.display = 'flex';
             }
@@ -1512,10 +2116,24 @@ function submitReport(isNoComment) {
         const userKey = currentUser.firstName + "_" + currentUser.lastName;
         let poly = currentUser.polygon;
         let todayStr = getTodayDateStr();
-        let payload = isNoComment ? { status: 'no_comment', timestamp: Date.now() } : { status: 'completed', orders: parseInt(document.getElementById('repOrders').value || "0"), deriglazova: reportData.deriglazova, gps: reportData.gps, break: reportData.break, timestamp: Date.now() };
+        let payload;
+
+        if (isNoComment) {
+            payload = { status: 'no_comment', timestamp: Date.now() };
+        } else {
+            let rawOrders = document.getElementById('repOrders').value.trim();
+            let orders = Number(rawOrders);
+
+            if (rawOrders === '' || !Number.isInteger(orders) || orders < 0) {
+                showToast("Введите корректное количество заказов (целое число, не меньше 0)", "red");
+                return;
+            }
+
+            payload = { status: 'completed', orders: orders, deriglazova: reportData.deriglazova, gps: reportData.gps, break: reportData.break, timestamp: Date.now() };
+        }
 
         let reportPath = getPolyPath(poly, `daily_reports/${todayStr}/${userKey}`);
-        db.ref(reportPath).set(payload).catch(err => console.log("Отчет ушел в оффлайн-очередь"));
+        db.ref(reportPath).set(payload).catch(err => console.log("Отчет ушел в оффлайн-очередь: " + err.message));
 
         if (!navigator.onLine) {
             queueForNativeSync(reportPath, payload);
@@ -1571,17 +2189,21 @@ function submitReport(isNoComment) {
                 systemInstruction: { parts: [{ text: 'Ты — аналитик логистики. Отвечай кратко (4-6 предложений), по-русски, без воды. Опирайся только на переданные данные, не додумывай цифры.' }] }
             };
 
-            const controller = new AbortController();
+                        const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
             fetch(WORKER_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody), signal: controller.signal })
-                .then(res => { clearTimeout(timeoutId); if (!res.ok) throw new Error('Код ' + res.status); return res.json(); })
+                .then(res => { if (!res.ok) throw new Error('Код ' + res.status); return res.json(); })
                 .then(aiData => {
                     let parts = aiData.candidates?.[0]?.content?.parts || [];
                     let textPart = parts.find(p => p.text);
                     let analysisText = textPart ? textPart.text : 'ИИ не вернул текстовый ответ.';
-                    results.innerHTML = `<div class="ai-result-item"><b>Анализ полигона</b><br><span style="font-size:13px; color:#555; white-space:pre-line;">${analysisText}</span></div>`;
+                    results.innerHTML = `<div class="ai-result-item"><b>Анализ полигона</b><br><span style="font-size:13px; color:#555; white-space:pre-line;">${escapeHtml(analysisText)}</span></div>`;
                 })
-                .catch(err => { results.innerHTML = '<p style="color:#d32f2f;">Ошибка ИИ-анализа: ' + err.message + '</p>'; });
+                .catch(err => {
+                    let msg = err.name === 'AbortError' ? 'Время ожидания истекло (20 секунд). Сервер не ответил.' : err.message;
+                    results.innerHTML = '<p style="color:#d32f2f;">Ошибка ИИ-анализа: ' + escapeHtml(msg) + '</p>';
+                })
+                .finally(() => clearTimeout(timeoutId));
         });
     }
 
@@ -1622,11 +2244,10 @@ function submitReport(isNoComment) {
     }
 
     let votingRef = null;
-    function initVotingLogic() {
+        function initVotingLogic() {
         let poly = currentUser.polygon;
-        votingRef = db.ref(getPolyPath(poly, 'polygon_votes'));
 
-        votingRef.on('value', snap => {
+        votingRef = attachListener(getPolyPath(poly, 'polygon_votes'), 'value', snap => {
             let data = snap.val();
             let container = document.getElementById('votingList');
             let status = document.getElementById('votingStatus');
@@ -1641,10 +2262,14 @@ function submitReport(isNoComment) {
 
             if (!data) data = { votes: {}, startTime: null, resolved: false, candidates: {} };
 
-            usersInPoly.forEach(u => {
+                        usersInPoly.forEach(u => {
                 let k = u.firstName + "_" + u.lastName;
                 if (!data.candidates[k]) {
-                    data.candidates[k] = { name: u.firstName + " " + u.lastName, votes: 0 };
+                    let newCandidate = { name: u.firstName + " " + u.lastName, votes: 0 };
+                    data.candidates[k] = newCandidate; // локально — чтобы сразу отрисовать, не дожидаясь round-trip
+                    // Пишем только по конкретному пути кандидата (candidates/${k}), а не весь объект candidates —
+                    // так это безопасный merge и не перетрёт голоса других кандидатов, если кто-то голосует параллельно
+                    votingRef.update({ [`candidates/${k}`]: newCandidate });
                 }
             });
 
@@ -1815,18 +2440,17 @@ function submitReport(isNoComment) {
 
             daysHtml += `<div class="schedule-day"><div class="schedule-date"><span>📅 ${dayName}, ${currentDay.getDate()} ${monthNames[currentDay.getMonth()]}</span><span class="slot-info">Занято: ${approvedWorkers.length}/${limit}</span></div><div class="workers-container">`;
             approvedWorkers.forEach(worker => {
-                let displayName = worker.replace(/_/g, ' '); let isMe = (worker === userKey);
+                let displayName = escapeHtml(worker.replace(/_/g, ' ')); let isMe = (worker === userKey);
                 let adminBtn = isAdmin ? `<span style="color:var(--danger); margin-left:8px; font-weight:bold; cursor:pointer;" onclick="adminRemoveWorker('${dateStr}', '${worker}')">✕</span>` : '';
                 let clickAction = (isMe && !isAdmin) ? `onclick="cancelShift('${dateStr}', '${worker}')"` : '';
                 daysHtml += `<div class="worker-badge ${isMe ? 'my-badge' : ''}" ${clickAction}><div class="worker-icon">${displayName.charAt(0)}</div>${displayName} ${adminBtn}</div>`;
             });
-            for(let j=0; j < (limit - approvedWorkers.length); j++) daysHtml += `<div class="worker-badge empty-slot"><div class="worker-icon empty">?</div>Свободное место</div>`;
+            for (let j = 0; j < (limit - approvedWorkers.length); j++) daysHtml += `<div class="worker-badge empty-slot"><div class="worker-icon empty">?</div>Свободное место</div>`;
             daysHtml += `</div>`;
 
             if (reserveWorkers.length > 0) {
                 daysHtml += `<div class="conflict-section"><div class="conflict-title">В резерве (ждут места):</div><div class="workers-container">`;
-                reserveWorkers.forEach(worker => { daysHtml += `<div class="worker-badge conflict"><div class="worker-icon conflict">${worker.replace(/_/g, ' ').charAt(0)}</div>${worker.replace(/_/g, ' ')}</div>`; });
-                daysHtml += `</div></div>`;
+                reserveWorkers.forEach(worker => { let rn = escapeHtml(worker.replace(/_/g, ' ')); daysHtml += `<div class="worker-badge conflict"><div class="worker-icon conflict">${rn.charAt(0)}</div>${rn}</div>`; });                daysHtml += `</div></div>`;
             }
             daysHtml += `</div>`;
         }
@@ -1834,8 +2458,16 @@ function submitReport(isNoComment) {
     }
 
     function processQueueAndSave(dateStr, workerToRemove) {
-        let approved = (globalSchedule.approved && globalSchedule.approved[dateStr]) ? [...globalSchedule.approved[dateStr]] : [];
-        let unplanned = (globalSchedule.unplanned && globalSchedule.unplanned[dateStr]) ? [...globalSchedule.unplanned[dateStr]] : [];
+    let poly = currentUser.polygon;
+    let schedulePath = getPolyPath(poly, 'final_schedule');
+
+    db.ref(schedulePath).transaction(function (currentSchedule) {
+        let schedule = currentSchedule || {};
+        if (!schedule.approved) schedule.approved = {};
+        if (!schedule.unplanned) schedule.unplanned = {};
+
+        let approved = schedule.approved[dateStr] ? [...schedule.approved[dateStr]] : [];
+        let unplanned = schedule.unplanned[dateStr] ? [...schedule.unplanned[dateStr]] : [];
         let limit = slotLimitsData[dateStr] || 3;
 
         if (workerToRemove) {
@@ -1847,9 +2479,20 @@ function submitReport(isNoComment) {
             approved.push(unplanned.shift());
         }
 
-        db.ref(getPolyPath(currentUser.polygon, `final_schedule/approved/${dateStr}`)).set(approved);
-        db.ref(getPolyPath(currentUser.polygon, `final_schedule/unplanned/${dateStr}`)).set(unplanned);
-    }
+        schedule.approved[dateStr] = approved;
+        schedule.unplanned[dateStr] = unplanned;
+        return schedule;
+    }, function (error, committed, snapshot) {
+        if (error) {
+            console.log("Ошибка транзакции processQueueAndSave: " + error.message);
+            return;
+        }
+        if (committed) {
+            globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
+            localStorage.setItem('offline_globalSchedule', JSON.stringify(globalSchedule));
+        }
+    });
+}
 
     window.cancelShift = function(dateStr, workerKey) {
         if (!isAdmin && confirm(`Отменить свою смену на этот день?`)) {
@@ -1870,9 +2513,9 @@ function submitReport(isNoComment) {
         let html = '';
         for (let key in globalUsersData) {
             let emp = globalUsersData[key];
-            if (emp.role === 'superadmin') continue;
 
-            if (emp.polygon !== currentUser.polygon) continue;
+
+            if (emp.polygon && emp.polygon !== currentUser.polygon) continue;
 
             let ver = emp.appVersion || 'Старое/Веб';
 
@@ -1889,8 +2532,7 @@ function submitReport(isNoComment) {
 
             html += `<div style="padding: 16px; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start; background: #f8f9fa; border: 1px solid #ced4da; border-radius: 8px;">
                         <div style="width: 100%; display: flex; justify-content: space-between;">
-                            <b style="font-size: 16px;">${emp.firstName} ${emp.lastName}</b>
-                            <span>${emp.role === 'admin' ? '⭐ (Админ)' : ''}</span>
+                            <b style="font-size: 16px;">${escapeHtml(emp.firstName)} ${escapeHtml(emp.lastName)}</b>                            <span>${emp.role === 'admin' ? '⭐ (Админ)' : ''}</span>
                         </div>
                         <span style="font-size:12px; color:${verColor}; font-weight:bold; margin-top: 4px;">📱 Версия: ${ver}</span>
                         <div style="margin-top: 12px; width: 100%; display: flex; gap: 8px;">
@@ -1912,8 +2554,7 @@ function submitReport(isNoComment) {
             let data = snap.val(); if (!data) { container.innerHTML = '<p style="color:#888;">Отчетов нет.</p>'; return; }
             let html = '';
             for (let k in data) {
-                let r = data[k]; let n = k.replace(/_/g, ' ');
-                html += r.status === 'no_comment' ? `<div class="report-item no-comment"><b>${n}</b><br><span style="color:var(--danger); font-size:13px; font-weight:bold;">Отказ от отчета</span></div>` : `<div class="report-item"><b>${n}</b><br><span style="font-size:13px; color:#555;">📦 Заказов: <b>${r.orders}</b><br>🏢 Дериглазова: ${r.deriglazova ? '<b>Да</b>' : 'Нет'}<br>🛰 GPS проблемы: ${r.gps ? '<b style="color:var(--danger);">Да</b>' : 'Нет'}<br>☕ Перерыв: ${r.break ? 'Да' : 'Нет'}</span></div>`;
+                let r = data[k]; let n = escapeHtml(k.replace(/_/g, ' '));                html += r.status === 'no_comment' ? `<div class="report-item no-comment"><b>${n}</b><br><span style="color:var(--danger); font-size:13px; font-weight:bold;">Отказ от отчета</span></div>` : `<div class="report-item"><b>${n}</b><br><span style="font-size:13px; color:#555;">📦 Заказов: <b>${r.orders}</b><br>🏢 Дериглазова: ${r.deriglazova ? '<b>Да</b>' : 'Нет'}<br>🛰 GPS проблемы: ${r.gps ? '<b style="color:var(--danger);">Да</b>' : 'Нет'}<br>☕ Перерыв: ${r.break ? 'Да' : 'Нет'}</span></div>`;
             }
             container.innerHTML = html;
         });
@@ -1933,8 +2574,8 @@ function submitReport(isNoComment) {
 
         for (let key in globalUsersData) {
             let emp = globalUsersData[key];
-            if (emp.role === 'superadmin') continue;
-            if (emp.polygon !== currentUser.polygon) continue;
+
+            if (emp.polygon && emp.polygon !== currentUser.polygon) continue;
 
             if (emp.vacationDates && emp.vacationDates.length > 0) {
                 hasVacations = true;
@@ -1961,8 +2602,7 @@ function submitReport(isNoComment) {
                 html += `<div class="vacation-item">
                             <div class="vacation-avatar">${initials}</div>
                             <div class="vacation-content">
-                                <h4 class="vacation-name">${emp.firstName} ${emp.lastName}</h4>
-                                <div class="vacation-badge">Запланирован</div>
+                                <h4 class="vacation-name">${escapeHtml(emp.firstName)} ${escapeHtml(emp.lastName)}</h4>                                <div class="vacation-badge">Запланирован</div>
                                 <div class="vacation-dates">
                                     <span class="material-symbols-outlined">calendar_month</span>
                                     <span>${dateStr}</span>
@@ -1983,20 +2623,21 @@ function submitReport(isNoComment) {
     // 1. ОФФЛАЙН-РЕЖИМ (Уведомления о статусе сети)
     // ============================================================================
     // Проверяем при запуске, есть ли интернет. Если нет — грузим из памяти.
-    window.addEventListener('load', () => {
+        window.addEventListener('load', () => {
         if (!navigator.onLine) {
-            const savedData = localStorage.getItem('offline_schedules');
-            const savedSchedule = localStorage.getItem('offline_globalSchedule'); // Достаем график
+            let cachedVersion = parseInt(localStorage.getItem('offline_cache_version') || '0', 10);
+            const savedData = cachedVersion === APP_VERSION ? localStorage.getItem('offline_schedules') : null;
+            const savedSchedule = cachedVersion === APP_VERSION ? localStorage.getItem('offline_globalSchedule') : null;
 
             if (savedData) {
                 globalUsersData = JSON.parse(savedData);
                 if (savedSchedule) {
-                    globalSchedule = JSON.parse(savedSchedule); // Применяем график
+                    globalSchedule = JSON.parse(savedSchedule);
                 }
                 renderCalendar();
                 showNetworkStatus("Оффлайн режим. Показаны сохраненные данные.", "#FF9800");
             } else {
-                showNetworkStatus("Нет интернета и нет сохраненных данных.", "#f44336");
+                showNetworkStatus("Нет интернета и нет сохраненных данных, либо они устарели.", "#f44336");
             }
         }
     });

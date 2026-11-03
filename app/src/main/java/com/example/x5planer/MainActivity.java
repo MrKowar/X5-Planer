@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
         // 2. Проверка обновлений при запуске
         checkForUpdates();
         requestLocationPermissionIfNeeded();
+        requestBatteryOptimizationExemption();
         // 3. Создаем WebView программно на весь экран
         WebView webView = new WebView(this);
 
@@ -109,7 +110,26 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(webView);
     }
-
+    private void requestBatteryOptimizationExemption() {
+        String packageName = getPackageName();
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Нужно разрешение")
+                    .setMessage("Чтобы отслеживание зоны и напоминания работали даже при закрытом приложении, отключите для X5 Planer оптимизацию батареи.")
+                    .setPositiveButton("Открыть настройки", (d, w) -> {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        intent.setData(Uri.parse("package:" + packageName));
+                        try {
+                            startActivity(intent);
+                        } catch (Exception e) {
+                            startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                        }
+                    })
+                    .setNegativeButton("Позже", null)
+                    .show();
+        }
+    }
     private void requestExactAlarmPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
@@ -135,20 +155,42 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     // --- СИСТЕМА АВТООБНОВЛЕНИЯ ---
+    // В Firebase узел "update": versionCode (число), apkUrl (прямая https-ссылка на APK),
+    // apkSha256 (хэш APK для проверки целостности), force (true/false, по умолчанию true —
+    // обновление обязательное), message (необязательный текст окна).
+    private String pendingApkUrl = null;
+    private String pendingApkSha256 = null;
+    private String pendingUpdateMessage = null;
+    private boolean pendingUpdateForced = true;
+    private boolean updateInProgress = false;
+    private boolean waitingInstallPermission = false;
+    private AlertDialog updateDialog = null;
+
     private void checkForUpdates() {
         DatabaseReference updateRef = FirebaseDatabase.getInstance().getReference("update");
-        updateRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        // Слушаем постоянно: если обновление выложено, пока приложение открыто, окно появится сразу
+        updateRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     Long remoteVersionCode = snapshot.child("versionCode").getValue(Long.class);
                     String apkUrl = snapshot.child("apkUrl").getValue(String.class);
+                    String apkSha256 = snapshot.child("apkSha256").getValue(String.class);
+                    Boolean force = snapshot.child("force").getValue(Boolean.class);
 
                     if (remoteVersionCode != null && apkUrl != null) {
+                        if (!apkUrl.startsWith("https://")) {
+                            android.util.Log.e("X5PLANER_UPDATE", "Отклонён небезопасный URL обновления: " + apkUrl);
+                            return;
+                        }
                         int currentVersionCode = getCurrentVersionCode();
 
                         if (remoteVersionCode > currentVersionCode) {
-                            showUpdateDialog(apkUrl);
+                            pendingApkUrl = apkUrl;
+                            pendingApkSha256 = apkSha256;
+                            pendingUpdateForced = force == null || force;
+                            pendingUpdateMessage = snapshot.child("message").getValue(String.class);
+                            showUpdateDialog(apkUrl, apkSha256);
                         }
                     }
                 }
@@ -159,6 +201,21 @@ public class MainActivity extends AppCompatActivity {
                 // Игнорируем ошибки сети при проверке обновлений
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Вернулись из настроек "Установка неизвестных приложений" — продолжаем установку
+        if (waitingInstallPermission && pendingApkUrl != null) {
+            waitingInstallPermission = false;
+            downloadAndInstallApk(pendingApkUrl, pendingApkSha256);
+            return;
+        }
+        // Пользователь закрыл установщик, не обновившись — обязательное обновление спрашиваем снова
+        if (pendingApkUrl != null && pendingUpdateForced && !updateInProgress) {
+            showUpdateDialog(pendingApkUrl, pendingApkSha256);
+        }
     }
 
     private int getCurrentVersionCode() {
@@ -175,49 +232,81 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showUpdateDialog(final String apkUrl) {
+    private void showUpdateDialog(final String apkUrl, final String apkSha256) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (isFinishing()) return;
+                if (updateDialog != null && updateDialog.isShowing()) return;
+
+                String text = (pendingUpdateMessage != null && !pendingUpdateMessage.trim().isEmpty())
+                        ? pendingUpdateMessage
+                        : "Вышла новая версия приложения. Обновитесь, чтобы продолжить работу.";
 
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("Доступно обновление");
-                builder.setMessage("Вышла новая версия приложения. Рекомендуем обновиться для продолжения работы.");
+                builder.setMessage(text);
                 builder.setCancelable(false);
 
-                builder.setPositiveButton("Обновить", (dialog, which) -> downloadAndInstallApk(apkUrl));
-                builder.setNegativeButton("Позже", (dialog, which) -> dialog.dismiss());
+                builder.setPositiveButton("Обновить", (dialog, which) -> downloadAndInstallApk(apkUrl, apkSha256));
+                if (!pendingUpdateForced) {
+                    builder.setNegativeButton("Позже", (dialog, which) -> dialog.dismiss());
+                }
 
-                builder.show();
+                updateDialog = builder.show();
             }
         });
     }
 
-    private void downloadAndInstallApk(String url) {
-        try {
-            Toast.makeText(this, "Скачивание обновления...", Toast.LENGTH_LONG).show();
+    private void downloadAndInstallApk(String url, String expectedSha256) {
+        if (updateInProgress) return;
 
+        // Android 8+: нужно разрешение "Установка неизвестных приложений" для X5 Planer
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !getPackageManager().canRequestPackageInstalls()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Нужно разрешение")
+                    .setMessage("Чтобы установить обновление, разрешите X5 Planer устанавливать приложения. После этого вернитесь назад — установка продолжится сама.")
+                    .setCancelable(false)
+                    .setPositiveButton("Открыть настройки", (d, w) -> {
+                        waitingInstallPermission = true;
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    })
+                    .show();
+            return;
+        }
+
+        try {
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
             request.setTitle("Обновление X5 Planer");
             request.setDescription("Загрузка новой версии приложения...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
 
-            // Скрываем загрузку из верхней шторки
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN);
-
+            // Папка приложения: файл принадлежит нам, FileProvider сможет отдать его установщику.
+            // Старые скачанные APK удаляем, чтобы не копились.
+            File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (dir != null && dir.listFiles() != null) {
+                for (File old : dir.listFiles()) {
+                    if (old.getName().endsWith(".apk")) old.delete();
+                }
+            }
             String fileName = "update_" + System.currentTimeMillis() + ".apk";
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+            request.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName);
 
             final DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
             if (manager != null) {
-                downloadId = manager.enqueue(request);
+                final long expectedDownloadId = manager.enqueue(request);
+                downloadId = expectedDownloadId;
+                updateInProgress = true;
+                showDownloadProgress(manager, expectedDownloadId);
 
                 BroadcastReceiver onComplete = new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
                         long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                        if (downloadId == id) {
-                            installApk(manager, id);
+                        if (expectedDownloadId == id) {
+                            verifyAndInstallApk(manager, id, expectedSha256);
                             try {
                                 unregisterReceiver(this);
                             } catch (Exception e) {
@@ -235,44 +324,133 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            onUpdateFailed("Не удалось начать скачивание обновления");
         }
     }
 
-    private void installApk(DownloadManager manager, long id) {
+    private AlertDialog progressDialog = null;
+
+    // Окно с процентом загрузки, обновляется раз в полсекунды
+    private void showDownloadProgress(DownloadManager manager, long id) {
+        progressDialog = new AlertDialog.Builder(this)
+                .setTitle("Обновление X5 Planer")
+                .setMessage("Скачивание... 0%")
+                .setCancelable(false)
+                .show();
+
+        final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!updateInProgress || downloadId != id || progressDialog == null || !progressDialog.isShowing()) return;
+                Cursor c = manager.query(new DownloadManager.Query().setFilterById(id));
+                if (c != null && c.moveToFirst()) {
+                    long done = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                    long total = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                    c.close();
+                    if (total > 0) progressDialog.setMessage("Скачивание... " + (done * 100 / total) + "%");
+                } else if (c != null) {
+                    c.close();
+                }
+                handler.postDelayed(this, 500);
+            }
+        });
+    }
+
+    private void dismissDownloadProgress() {
+        if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
+        progressDialog = null;
+    }
+
+    // Сообщает об ошибке и снова предлагает обновиться
+    private void onUpdateFailed(String message) {
+        updateInProgress = false;
+        dismissDownloadProgress();
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        if (pendingApkUrl != null) showUpdateDialog(pendingApkUrl, pendingApkSha256);
+    }
+
+    private String computeSha256(File file) {
+        try (java.io.FileInputStream in = new java.io.FileInputStream(file)) {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest.digest()) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void verifyAndInstallApk(DownloadManager manager, long id, String expectedSha256) {
         DownloadManager.Query query = new DownloadManager.Query();
         query.setFilterById(id);
         Cursor cursor = manager.query(query);
 
-        if (cursor != null && cursor.moveToFirst()) {
-            int columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
-            if (columnIndex != -1) {
-                String downloadUriString = cursor.getString(columnIndex);
-                cursor.close();
+        if (cursor == null) {
+            onUpdateFailed("Ошибка обновления: не удалось получить статус загрузки");
+            return;
+        }
+        if (!cursor.moveToFirst()) {
+            cursor.close();
+            onUpdateFailed("Ошибка обновления: загрузка не найдена");
+            return;
+        }
+        int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+        int status = statusIndex != -1 ? cursor.getInt(statusIndex) : -1;
+        if (status != DownloadManager.STATUS_SUCCESSFUL) {
+            cursor.close();
+            onUpdateFailed("Загрузка обновления не завершилась успешно");
+            return;
+        }
+        int columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+        if (columnIndex == -1) {
+            cursor.close();
+            onUpdateFailed("Ошибка обновления: файл не найден");
+            return;
+        }
+        String downloadUriString = cursor.getString(columnIndex);
+        cursor.close();
+        if (downloadUriString == null) {
+            onUpdateFailed("Ошибка обновления: файл не найден");
+            return;
+        }
 
-                if (downloadUriString != null) {
-                    Uri uri = Uri.parse(downloadUriString);
-                    File file = new File(uri.getPath());
+        File file = new File(Uri.parse(downloadUriString).getPath());
 
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        Uri apkUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
-                        intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    } else {
-                        intent.setDataAndType(Uri.fromFile(file), "application/vnd.android.package-archive");
-                    }
-
-                    try {
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            } else {
-                cursor.close();
+        if (expectedSha256 != null && !expectedSha256.isEmpty()) {
+            String actualSha256 = computeSha256(file);
+            if (actualSha256 == null || !actualSha256.equalsIgnoreCase(expectedSha256)) {
+                android.util.Log.e("X5PLANER_UPDATE", "Хэш скачанного APK не совпал с ожидаемым — установка отменена");
+                file.delete();
+                onUpdateFailed("Файл обновления повреждён или подменён, установка отменена");
+                return;
             }
+        } else {
+            android.util.Log.w("X5PLANER_UPDATE", "apkSha256 не задан в Firebase — устанавливаем без проверки целостности");
+        }
+
+        updateInProgress = false;
+        dismissDownloadProgress();
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Uri apkUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+        intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+            onUpdateFailed("Не удалось запустить установку обновления");
         }
     }
 
@@ -338,16 +516,25 @@ public class MainActivity extends AppCompatActivity {
         public void cancelEveningReminders() {
             cancelTodayReminders(MainActivity.this);
         }
-    }
-    @android.webkit.JavascriptInterface
-    public void startShiftTracking() {
-        Intent serviceIntent = new Intent(MainActivity.this, GeoTrackingService.class);
-        androidx.core.content.ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
-    }
 
-    @android.webkit.JavascriptInterface
-    public void stopShiftTracking() {
-        stopService(new Intent(MainActivity.this, GeoTrackingService.class));
+        @android.webkit.JavascriptInterface
+        public void startShiftTracking() {
+            Intent serviceIntent = new Intent(MainActivity.this, GeoTrackingService.class);
+            androidx.core.content.ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
+        }
+
+        @android.webkit.JavascriptInterface
+        public void stopShiftTracking() {
+            stopService(new Intent(MainActivity.this, GeoTrackingService.class));
+        }
+
+        // Сохраняет даты, в которые у пользователя стоит смена (JSON-массив "yyyy-MM-dd").
+        // Напоминание об отчёте приходит только в эти дни.
+        @android.webkit.JavascriptInterface
+        public void setShiftDates(String jsonArray) {
+            getSharedPreferences("Reminders", MODE_PRIVATE)
+                    .edit().putString("shift_dates", jsonArray == null ? "[]" : jsonArray).apply();
+        }
     }
     // ---------- ОФЛАЙН-ОЧЕРЕДЬ (WorkManager) ----------
 
@@ -440,9 +627,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static void cancelTodayReminders(Context ctx) {
+    // Дата по Москве (как getTodayDateStr() в веб-части), со сдвигом в днях
+    public static String getMoscowDateStr(int dayOffset) {
         java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
-        String today = fmt.format(new java.util.Date());
+        java.util.TimeZone tz = java.util.TimeZone.getTimeZone("Europe/Moscow");
+        fmt.setTimeZone(tz);
+        Calendar cal = Calendar.getInstance(tz);
+        cal.add(Calendar.DAY_OF_YEAR, dayOffset);
+        return fmt.format(cal.getTime());
+    }
+
+    public static void cancelTodayReminders(Context ctx) {
+        String today = getMoscowDateStr(0);
         ctx.getSharedPreferences("Reminders", MODE_PRIVATE)
                 .edit().putString("report_sent_date", today).apply();
 
