@@ -528,6 +528,11 @@ public class MainActivity extends AppCompatActivity {
             stopService(new Intent(MainActivity.this, GeoTrackingService.class));
         }
 
+        @android.webkit.JavascriptInterface
+        public boolean isShiftTrackingActive() {
+            return GeoTrackingService.isRunning;
+        }
+
         // Сохраняет даты, в которые у пользователя стоит смена (JSON-массив "yyyy-MM-dd").
         // Напоминание об отчёте приходит только в эти дни.
         @android.webkit.JavascriptInterface

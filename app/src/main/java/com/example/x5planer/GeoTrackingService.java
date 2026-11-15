@@ -28,6 +28,9 @@ public class GeoTrackingService extends Service {
     private LocationListener verifyListener;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean restartInProgress = false;
+    private boolean stopped = false;
+    // Служба запущена (смена идёт) — по нему index.html восстанавливает кнопку «Я НА ЛИНИИ»
+    static volatile boolean isRunning = false;
     private static final int RESTART_TOGGLES = 10;
     private static final long RESTART_STEP_MS = 270;
     private static final long FRESH_FIX_TIMEOUT_MS = 20000;
@@ -71,6 +74,7 @@ public class GeoTrackingService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
+        isRunning = true;
         startLocationUpdates();
         return START_STICKY;
     }
@@ -85,10 +89,14 @@ public class GeoTrackingService extends Service {
             return;
         }
 
+        // Служба уже отслеживает — не регистрируем второй слушатель (иначе старый остаётся
+        // подписанным навсегда и шлёт уведомления даже после выхода с линии)
+        if (locationListener != null) return;
+
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                if (restartInProgress) return;
+                if (stopped || restartInProgress) return;
                 if (!isInZone(location)) {
                     // Вне зоны — сначала перезапускаем определение местоположения, потом перепроверяем
                     restartLocationAndRecheck();
@@ -103,6 +111,7 @@ public class GeoTrackingService extends Service {
     }
 
     private boolean registerUpdates() {
+        if (stopped) return true;
         try {
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 60000, 0, locationListener);
@@ -136,6 +145,7 @@ public class GeoTrackingService extends Service {
 
     @SuppressWarnings("deprecation")
     private void requestFreshFix() {
+        if (stopped) return;
         verifyListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
@@ -163,7 +173,7 @@ public class GeoTrackingService extends Service {
     private final Runnable recheckTimeout = () -> finishRecheck(false);
 
     private void finishRecheck(boolean inZone) {
-        if (!restartInProgress) return;
+        if (stopped || !restartInProgress) return;
         restartInProgress = false;
         handler.removeCallbacks(recheckTimeout);
         if (verifyListener != null) {
@@ -246,6 +256,9 @@ public class GeoTrackingService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        stopped = true;
+        isRunning = false;
+        restartInProgress = false;
         handler.removeCallbacksAndMessages(null);
         if (locationManager != null && locationListener != null) {
             locationManager.removeUpdates(locationListener);
@@ -253,6 +266,11 @@ public class GeoTrackingService extends Service {
         if (locationManager != null && verifyListener != null) {
             locationManager.removeUpdates(verifyListener);
         }
+        locationListener = null;
+        verifyListener = null;
+        // Вышли с линии — убираем уведомления о перезапуске и о выходе из зоны
+        NotificationManagerCompat.from(this).cancel(RESTART_NOTIFICATION_ID);
+        NotificationManagerCompat.from(this).cancel(ZONE_WARNING_NOTIFICATION_ID);
     }
 
     @Nullable

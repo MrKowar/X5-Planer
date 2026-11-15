@@ -711,6 +711,16 @@
         if (startBtn) startBtn.classList.toggle('active', isOnShift);
     }
 
+    // После перезапуска приложения служба отслеживания может продолжать работать —
+    // показываем кнопку «Я НА ЛИНИИ» включённой, чтобы с линии можно было выйти
+    window.addEventListener('load', () => {
+        if (window.AndroidApp && window.AndroidApp.isShiftTrackingActive && window.AndroidApp.isShiftTrackingActive()) {
+            isOnShift = true;
+            if (!shiftWatchInterval) shiftWatchInterval = setInterval(checkGeoPosition, 60000);
+            updateShiftButtonsUI();
+        }
+    });
+
         function getPolyPath(poly, path) {
         if (!poly) {
             console.warn('getPolyPath вызван без полигона для пути: ' + path);
@@ -796,7 +806,7 @@
     let rainyDays = [];
     let profitableDays = {};
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-    const APP_VERSION = 14
+    const APP_VERSION = 15
     ; // Обновлена версия для вызова модалки
         function saveOfflineCache(key, data) {
         try {
@@ -1257,6 +1267,7 @@
         } else if (lastSeenVersion < APP_VERSION) {
             let cl = document.getElementById('changelogContent');
             cl.innerHTML = `<ul>
+                <li><b>🛑 Выход с линии:</b> Исправлено — после «Я НА ЛИНИИ» → выкл. отслеживание и уведомления о зоне полностью останавливаются.</li>
                 <li><b>📍 Геолокация:</b> При выходе из рабочей зоны приложение само перезапускает определение местоположения и перепроверяет точку — меньше ложных предупреждений. В шторке видно «🔄 Перезапуск геолокации…» и результат.</li>
                 <li><b>🔔 Напоминания об отчёте:</b> Теперь приходят только в те дни, когда у вас стоит смена.</li>
                 <li><b>💬 Новая поддержка:</b> Удобный чат с разработчиком — видно историю переписки и ответы прямо в приложении.</li>
