@@ -13,7 +13,9 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -23,8 +25,18 @@ public class GeoTrackingService extends Service {
 
     private LocationManager locationManager;
     private LocationListener locationListener;
+    private LocationListener verifyListener;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean restartInProgress = false;
+    private boolean stopped = false;
+    // Служба запущена (смена идёт) — по нему index.html восстанавливает кнопку «Я НА ЛИНИИ»
+    static volatile boolean isRunning = false;
+    private static final int RESTART_TOGGLES = 10;
+    private static final long RESTART_STEP_MS = 270;
+    private static final long FRESH_FIX_TIMEOUT_MS = 20000;
     private static final int SERVICE_NOTIFICATION_ID = 5000;
     private static final int ZONE_WARNING_NOTIFICATION_ID = 5001;
+    private static final int RESTART_NOTIFICATION_ID = 5002;
     private static final String SERVICE_CHANNEL_ID = "geo_tracking_service";
 
     // Та же геозона (Дериглазова), что и в index.html — если полигон поменяется, обновляйте в обоих местах
@@ -62,6 +74,7 @@ public class GeoTrackingService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
+        isRunning = true;
         startLocationUpdates();
         return START_STICKY;
     }
@@ -76,12 +89,17 @@ public class GeoTrackingService extends Service {
             return;
         }
 
+        // Служба уже отслеживает — не регистрируем второй слушатель (иначе старый остаётся
+        // подписанным навсегда и шлёт уведомления даже после выхода с линии)
+        if (locationListener != null) return;
+
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                boolean inZone = isPointInPolygon(location.getLatitude(), location.getLongitude(), WORK_ZONE_POLYGON);
-                if (!inZone) {
-                    showZoneWarningNotification();
+                if (stopped || restartInProgress) return;
+                if (!isInZone(location)) {
+                    // Вне зоны — сначала перезапускаем определение местоположения, потом перепроверяем
+                    restartLocationAndRecheck();
                 }
             }
             @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
@@ -89,11 +107,103 @@ public class GeoTrackingService extends Service {
             @Override public void onProviderDisabled(String provider) {}
         };
 
+        if (!registerUpdates()) stopSelf();
+    }
+
+    private boolean registerUpdates() {
+        if (stopped) return true;
         try {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 60000, 0, locationListener);
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 60000, 0, locationListener);
+            }
+            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 60000, 0, locationListener);
+            }
+            return true;
         } catch (SecurityException e) {
-            stopSelf();
+            return false;
         }
+    }
+
+    private boolean isInZone(Location location) {
+        return isPointInPolygon(location.getLatitude(), location.getLongitude(), WORK_ZONE_POLYGON);
+    }
+
+    // 10 переключений (выкл/вкл) за 2,7 с, последнее — включение; затем запрос свежей точки
+    private void restartLocationAndRecheck() {
+        restartInProgress = true;
+        showRestartNotification("🔄 Перезапуск геолокации…", 0);
+        for (int step = 1; step <= RESTART_TOGGLES; step++) {
+            final boolean turnOn = step % 2 == 0;
+            handler.postDelayed(() -> {
+                if (turnOn) registerUpdates();
+                else locationManager.removeUpdates(locationListener);
+            }, (step - 1) * RESTART_STEP_MS);
+        }
+        handler.postDelayed(this::requestFreshFix, RESTART_TOGGLES * RESTART_STEP_MS);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void requestFreshFix() {
+        if (stopped) return;
+        verifyListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                finishRecheck(isInZone(location));
+            }
+            @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
+            @Override public void onProviderEnabled(String provider) {}
+            @Override public void onProviderDisabled(String provider) {}
+        };
+        try {
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                locationManager.requestSingleUpdate(LocationManager.GPS_PROVIDER, verifyListener, Looper.getMainLooper());
+            }
+            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, verifyListener, Looper.getMainLooper());
+            }
+        } catch (SecurityException e) {
+            finishRecheck(false);
+            return;
+        }
+        // Свежая точка не пришла — считаем, что сбой GPS, и предупреждаем как раньше
+        handler.postDelayed(recheckTimeout, FRESH_FIX_TIMEOUT_MS);
+    }
+
+    private final Runnable recheckTimeout = () -> finishRecheck(false);
+
+    private void finishRecheck(boolean inZone) {
+        if (stopped || !restartInProgress) return;
+        restartInProgress = false;
+        handler.removeCallbacks(recheckTimeout);
+        if (verifyListener != null) {
+            locationManager.removeUpdates(verifyListener);
+            verifyListener = null;
+        }
+        if (inZone) {
+            showRestartNotification("✅ Геолокация перезапущена — вы в рабочей зоне", 10000);
+        } else {
+            NotificationManagerCompat.from(this).cancel(RESTART_NOTIFICATION_ID);
+            showZoneWarningNotification();
+        }
+    }
+
+    // Тихое уведомление, чтобы было видно, что перезапуск сработал; timeoutMs = 0 — висит до замены
+    private void showRestartNotification(String text, long timeoutMs) {
+        boolean canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        if (!canNotify) return;
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentTitle("X5 Planer")
+                .setContentText(text)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOnlyAlertOnce(true)
+                .setAutoCancel(true);
+        if (timeoutMs > 0) builder.setTimeoutAfter(timeoutMs);
+
+        NotificationManagerCompat.from(this).notify(RESTART_NOTIFICATION_ID, builder.build());
     }
 
     private boolean isPointInPolygon(double lat, double lng, double[][] polygon) {
@@ -146,9 +256,21 @@ public class GeoTrackingService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        stopped = true;
+        isRunning = false;
+        restartInProgress = false;
+        handler.removeCallbacksAndMessages(null);
         if (locationManager != null && locationListener != null) {
             locationManager.removeUpdates(locationListener);
         }
+        if (locationManager != null && verifyListener != null) {
+            locationManager.removeUpdates(verifyListener);
+        }
+        locationListener = null;
+        verifyListener = null;
+        // Вышли с линии — убираем уведомления о перезапуске и о выходе из зоны
+        NotificationManagerCompat.from(this).cancel(RESTART_NOTIFICATION_ID);
+        NotificationManagerCompat.from(this).cancel(ZONE_WARNING_NOTIFICATION_ID);
     }
 
     @Nullable

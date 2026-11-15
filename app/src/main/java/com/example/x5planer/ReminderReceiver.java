@@ -12,9 +12,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
+import org.json.JSONArray;
 
 public class ReminderReceiver extends BroadcastReceiver {
 
@@ -24,10 +22,11 @@ public class ReminderReceiver extends BroadcastReceiver {
 
         SharedPreferences prefs = context.getSharedPreferences("Reminders", Context.MODE_PRIVATE);
         String sentDate = prefs.getString("report_sent_date", "");
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        // Напоминание в 00:00 относится к смене прошедшего дня
+        String shiftDate = MainActivity.getMoscowDateStr(hour == 0 ? -1 : 0);
 
-        // Если сегодня отчет еще не отправляли — показываем уведомление
-        if (!sentDate.equals(today)) {
+        // Показываем уведомление только если в этот день у пользователя смена и отчет еще не отправлен
+        if (hasShiftOn(prefs, shiftDate) && !sentDate.equals(shiftDate)) {
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, MainActivity.CHANNEL_ID)
                     .setSmallIcon(android.R.drawable.ic_dialog_info) // Стандартная системная иконка
                     .setContentTitle("X5 Planer")
@@ -47,5 +46,17 @@ public class ReminderReceiver extends BroadcastReceiver {
         if (am != null && hour >= 0) {
             MainActivity.scheduleSingleReminder(context, am, hour);
         }
+    }
+
+    private static boolean hasShiftOn(SharedPreferences prefs, String date) {
+        try {
+            JSONArray dates = new JSONArray(prefs.getString("shift_dates", "[]"));
+            for (int i = 0; i < dates.length(); i++) {
+                if (date.equals(dates.optString(i))) return true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }

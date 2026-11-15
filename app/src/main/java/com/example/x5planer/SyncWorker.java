@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.database.FirebaseDatabase;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class SyncWorker extends Worker {
 
@@ -46,7 +48,8 @@ public class SyncWorker extends Worker {
                     // Используем наш ручной метод вместо несуществующего .toMap()
                     Map<String, Object> mapValue = jsonToMap(jsonObj);
 
-                    FirebaseDatabase.getInstance().getReference(path).setValue(mapValue);
+                    // Ждём подтверждения записи, иначе элемент удалится из очереди, даже если не дошёл
+                    Tasks.await(FirebaseDatabase.getInstance().getReference(path).setValue(mapValue), 30, TimeUnit.SECONDS);
                 } catch (Exception writeErr) {
                     remaining.put(item);
                     anyFailed = true;
