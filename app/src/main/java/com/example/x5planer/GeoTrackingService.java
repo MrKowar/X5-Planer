@@ -33,6 +33,7 @@ public class GeoTrackingService extends Service {
     private static final long FRESH_FIX_TIMEOUT_MS = 20000;
     private static final int SERVICE_NOTIFICATION_ID = 5000;
     private static final int ZONE_WARNING_NOTIFICATION_ID = 5001;
+    private static final int RESTART_NOTIFICATION_ID = 5002;
     private static final String SERVICE_CHANNEL_ID = "geo_tracking_service";
 
     // Та же геозона (Дериглазова), что и в index.html — если полигон поменяется, обновляйте в обоих местах
@@ -122,6 +123,7 @@ public class GeoTrackingService extends Service {
     // 10 переключений (выкл/вкл) за 2,7 с, последнее — включение; затем запрос свежей точки
     private void restartLocationAndRecheck() {
         restartInProgress = true;
+        showRestartNotification("🔄 Перезапуск геолокации…", 0);
         for (int step = 1; step <= RESTART_TOGGLES; step++) {
             final boolean turnOn = step % 2 == 0;
             handler.postDelayed(() -> {
@@ -168,7 +170,30 @@ public class GeoTrackingService extends Service {
             locationManager.removeUpdates(verifyListener);
             verifyListener = null;
         }
-        if (!inZone) showZoneWarningNotification();
+        if (inZone) {
+            showRestartNotification("✅ Геолокация перезапущена — вы в рабочей зоне", 10000);
+        } else {
+            NotificationManagerCompat.from(this).cancel(RESTART_NOTIFICATION_ID);
+            showZoneWarningNotification();
+        }
+    }
+
+    // Тихое уведомление, чтобы было видно, что перезапуск сработал; timeoutMs = 0 — висит до замены
+    private void showRestartNotification(String text, long timeoutMs) {
+        boolean canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        if (!canNotify) return;
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentTitle("X5 Planer")
+                .setContentText(text)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOnlyAlertOnce(true)
+                .setAutoCancel(true);
+        if (timeoutMs > 0) builder.setTimeoutAfter(timeoutMs);
+
+        NotificationManagerCompat.from(this).notify(RESTART_NOTIFICATION_ID, builder.build());
     }
 
     private boolean isPointInPolygon(double lat, double lng, double[][] polygon) {
