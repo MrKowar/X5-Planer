@@ -2,7 +2,6 @@ package com.example.x5planer;
 
 import android.widget.Toast;
 import android.webkit.WebChromeClient;
-import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -34,7 +33,15 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import android.content.pm.PackageInstaller;
 import android.Manifest;
 import android.app.AlarmManager;
 import android.app.NotificationChannel;
@@ -54,11 +61,10 @@ import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
 
-    private long downloadId = -1;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        currentRef = new java.lang.ref.WeakReference<>(this);
 
         // 1. Инициализация Firebase
         FirebaseApp.initializeApp(this);
@@ -158,13 +164,13 @@ public class MainActivity extends AppCompatActivity {
     // В Firebase узел "update": versionCode (число), apkUrl (прямая https-ссылка на APK),
     // apkSha256 (хэш APK для проверки целостности), force (true/false, по умолчанию true —
     // обновление обязательное), message (необязательный текст окна).
+    private long pendingVersionCode = 0;
     private String pendingApkUrl = null;
     private String pendingApkSha256 = null;
     private String pendingUpdateMessage = null;
     private boolean pendingUpdateForced = true;
     private boolean updateInProgress = false;
     private boolean waitingInstallPermission = false;
-    private AlertDialog updateDialog = null;
     private DatabaseReference updateListenerRef = null;
     private ValueEventListener updateListener = null;
 
@@ -175,7 +181,16 @@ public class MainActivity extends AppCompatActivity {
         if (updateListenerRef != null && updateListener != null) {
             updateListenerRef.removeEventListener(updateListener);
         }
+        if (currentRef != null && currentRef.get() == this) currentRef = null;
         super.onDestroy();
+    }
+
+    // Открытый экран — через него UpdateInstallReceiver показывает окна установки
+    private static java.lang.ref.WeakReference<MainActivity> currentRef = null;
+
+    static MainActivity current() {
+        MainActivity a = currentRef != null ? currentRef.get() : null;
+        return (a != null && !a.isFinishing() && !a.isDestroyed()) ? a : null;
     }
 
     private void checkForUpdates() {
@@ -199,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
                         int currentVersionCode = getCurrentVersionCode();
 
                         if (remoteVersionCode > currentVersionCode) {
+                            pendingVersionCode = remoteVersionCode;
                             pendingApkUrl = apkUrl;
                             pendingApkSha256 = apkSha256;
                             pendingUpdateForced = force == null || force;
@@ -216,48 +232,31 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Скачанный и проверенный APK — при повторной попытке открываем установщик сразу, без новой загрузки
+    // Скачанный и проверенный APK — при повторной попытке ставим сразу, без новой загрузки
     private File readyApkFile = null;
     private String readyApkSha256 = null;
-    // Установщик открыт — по возвращении проверяем, обновилось ли приложение
+    // Окно установки Android открыто — по возвращении проверяем, обновилось ли приложение
     private boolean installerLaunched = false;
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Вернулись из настроек "Установка неизвестных приложений" — продолжаем установку
+        // Вернулись из настроек "Установка неизвестных приложений" — продолжаем установку сами
         if (waitingInstallPermission && pendingApkUrl != null) {
             waitingInstallPermission = false;
             downloadAndInstallApk(pendingApkUrl, pendingApkSha256);
             return;
         }
         // Вернулись из установщика, а приложение не обновилось (нажали «Отмена» или
-        // «Не устанавливать» в Google Play Protect) — объясняем, что делать, вместо того
-        // чтобы по кругу показывать то же окно и заново скачивать файл
+        // «Не устанавливать» в Google Play Protect) — подсказываем, а не гоняем по кругу
         if (installerLaunched) {
             installerLaunched = false;
-            if (pendingApkUrl != null && !updateInProgress) showInstallHelpDialog();
+            if (pendingApkUrl != null && !updateInProgress) showInstallCancelled();
             return;
         }
-        // Обязательное обновление, которое ещё не начинали, — спрашиваем снова
         if (pendingApkUrl != null && pendingUpdateForced && !updateInProgress) {
             showUpdateDialog(pendingApkUrl, pendingApkSha256);
         }
-    }
-
-    private void showInstallHelpDialog() {
-        if (isFinishing()) return;
-        if (updateDialog != null && updateDialog.isShowing()) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle("Обновление не установлено")
-                .setMessage("Установка была отменена.\n\n"
-                        + "Нажмите «Установить снова». Если появится окно Google Play Protect — "
-                        + "нажмите «Сканировать приложение» (Scan app), а затем «Установить» (Install). "
-                        + "Не нажимайте «Не устанавливать».")
-                .setCancelable(false)
-                .setPositiveButton("Установить снова", (d, w) -> downloadAndInstallApk(pendingApkUrl, pendingApkSha256));
-        if (!pendingUpdateForced) builder.setNegativeButton("Позже", (d, w) -> d.dismiss());
-        updateDialog = builder.show();
     }
 
     private int getCurrentVersionCode() {
@@ -274,151 +273,280 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ---------- Карточка обновления: одна большая кнопка «Обновить», всё остальное — внутри ----------
+    private android.app.Dialog updateSheet = null;
+    private android.widget.TextView sheetIcon, sheetTitle, sheetText, sheetLink, sheetLater;
+    private android.widget.ProgressBar sheetProgress;
+    private android.widget.Button sheetButton;
+
+    private int dp(int v) {
+        return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    private void ensureUpdateSheet() {
+        if (updateSheet != null) return;
+        android.widget.LinearLayout card = new android.widget.LinearLayout(this);
+        card.setOrientation(android.widget.LinearLayout.VERTICAL);
+        card.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        card.setPadding(dp(24), dp(28), dp(24), dp(20));
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(android.graphics.Color.WHITE);
+        bg.setCornerRadius(dp(28));
+        card.setBackground(bg);
+        card.setElevation(dp(12));
+
+        sheetIcon = new android.widget.TextView(this);
+        sheetIcon.setTextSize(44);
+        sheetIcon.setGravity(android.view.Gravity.CENTER);
+        card.addView(sheetIcon);
+
+        sheetTitle = new android.widget.TextView(this);
+        sheetTitle.setTextSize(21);
+        sheetTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        sheetTitle.setTextColor(android.graphics.Color.parseColor("#1F2937"));
+        sheetTitle.setGravity(android.view.Gravity.CENTER);
+        sheetTitle.setPadding(0, dp(10), 0, dp(8));
+        card.addView(sheetTitle);
+
+        sheetText = new android.widget.TextView(this);
+        sheetText.setTextSize(15);
+        sheetText.setTextColor(android.graphics.Color.parseColor("#6B7280"));
+        sheetText.setGravity(android.view.Gravity.CENTER);
+        sheetText.setLineSpacing(0, 1.15f);
+        card.addView(sheetText);
+
+        sheetProgress = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        sheetProgress.setMax(100);
+        sheetProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#22C55E")));
+        android.widget.LinearLayout.LayoutParams pl = new android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, dp(10));
+        pl.topMargin = dp(18);
+        card.addView(sheetProgress, pl);
+
+        sheetButton = new android.widget.Button(this);
+        sheetButton.setAllCaps(false);
+        sheetButton.setTextSize(18);
+        sheetButton.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        sheetButton.setTextColor(android.graphics.Color.WHITE);
+        sheetButton.setStateListAnimator(null);
+        android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{android.graphics.Color.parseColor("#22C55E"), android.graphics.Color.parseColor("#16A34A")});
+        btnBg.setCornerRadius(dp(28));
+        sheetButton.setBackground(btnBg);
+        android.widget.LinearLayout.LayoutParams bl = new android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, dp(56));
+        bl.topMargin = dp(22);
+        card.addView(sheetButton, bl);
+
+        sheetLink = new android.widget.TextView(this);
+        sheetLink.setTextSize(13);
+        sheetLink.setTextColor(android.graphics.Color.parseColor("#2563EB"));
+        sheetLink.setGravity(android.view.Gravity.CENTER);
+        sheetLink.setPadding(0, dp(14), 0, 0);
+        sheetLink.setPaintFlags(sheetLink.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+        sheetLink.setText("Не получается? Скачать через браузер");
+        sheetLink.setOnClickListener(v -> openUpdateInBrowser());
+        card.addView(sheetLink);
+
+        sheetLater = new android.widget.TextView(this);
+        sheetLater.setTextSize(14);
+        sheetLater.setTextColor(android.graphics.Color.parseColor("#9CA3AF"));
+        sheetLater.setGravity(android.view.Gravity.CENTER);
+        sheetLater.setPadding(0, dp(12), 0, 0);
+        sheetLater.setText("Позже");
+        sheetLater.setOnClickListener(v -> updateSheet.dismiss());
+        card.addView(sheetLater);
+
+        android.widget.FrameLayout root = new android.widget.FrameLayout(this);
+        root.setPadding(dp(20), 0, dp(20), 0);
+        root.addView(card, new android.widget.FrameLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER));
+
+        updateSheet = new android.app.Dialog(this);
+        updateSheet.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        updateSheet.setContentView(root);
+        updateSheet.setCancelable(false);
+        if (updateSheet.getWindow() != null) {
+            updateSheet.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            updateSheet.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    // Одна функция рисует любое состояние карточки. buttonText == null — кнопка неактивна (идёт загрузка/установка)
+    private void renderUpdateSheet(String icon, String title, String text, int progress,
+                                   String buttonText, Runnable onButton, boolean showBrowserLink) {
+        if (isFinishing() || isDestroyed()) return;
+        ensureUpdateSheet();
+        sheetIcon.setText(icon);
+        sheetTitle.setText(title);
+        sheetText.setText(text);
+        sheetProgress.setVisibility(progress >= 0 ? View.VISIBLE : View.GONE);
+        if (progress >= 0) sheetProgress.setProgress(progress);
+        if (buttonText != null) {
+            sheetButton.setText(buttonText);
+            sheetButton.setEnabled(true);
+            sheetButton.setAlpha(1f);
+            sheetButton.setOnClickListener(v -> onButton.run());
+        } else {
+            sheetButton.setText("Подождите…");
+            sheetButton.setEnabled(false);
+            sheetButton.setAlpha(0.6f);
+        }
+        sheetLink.setVisibility(showBrowserLink ? View.VISIBLE : View.GONE);
+        sheetLater.setVisibility(!pendingUpdateForced && buttonText != null ? View.VISIBLE : View.GONE);
+        if (!updateSheet.isShowing()) updateSheet.show();
+    }
+
+    private void startUpdate() {
+        downloadAndInstallApk(pendingApkUrl, pendingApkSha256);
+    }
+
     private void showUpdateDialog(final String apkUrl, final String apkSha256) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (isFinishing() || isDestroyed()) return;
-                // Одно окно за раз: не показываем второе поверх первого, загрузки или установщика
-                if (updateDialog != null && updateDialog.isShowing()) return;
-                if (updateInProgress || installerLaunched) return;
-
-                String text = (pendingUpdateMessage != null && !pendingUpdateMessage.trim().isEmpty())
-                        ? pendingUpdateMessage
-                        : "Вышла новая версия приложения. Обновитесь, чтобы продолжить работу.";
-
-                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                builder.setTitle("Доступно обновление");
-                builder.setMessage(text);
-                builder.setCancelable(false);
-
-                builder.setPositiveButton("Обновить", (dialog, which) -> downloadAndInstallApk(apkUrl, apkSha256));
-                if (!pendingUpdateForced) {
-                    builder.setNegativeButton("Позже", (dialog, which) -> dialog.dismiss());
-                }
-
-                updateDialog = builder.show();
-            }
+        runOnUiThread(() -> {
+            // Одно окно за раз: не перебиваем загрузку, установку или уже открытую карточку
+            if (updateInProgress || installerLaunched) return;
+            if (updateSheet != null && updateSheet.isShowing()) return;
+            renderUpdateSheet("🚀", "Доступно обновление",
+                    "Новая версия X5 Planer готова.\nНажмите «Обновить» — приложение всё сделает само.",
+                    -1, "Обновить", this::startUpdate, false);
         });
     }
 
+    private void showInstallCancelled() {
+        renderUpdateSheet("🛡️", "Почти готово",
+                "Установку отменили. Нажмите «Обновить» ещё раз.\n\n"
+                        + "Если появится Google Play Protect — нажмите «Сканировать приложение», "
+                        + "затем «Установить».",
+                -1, "Обновить", this::startUpdate, true);
+    }
+
+    private void showUpdateErrorDialog(String reason) {
+        renderUpdateSheet("⚠️", "Не получилось обновить", reason + "\nНажмите «Повторить».",
+                -1, "Повторить", this::startUpdate, true);
+    }
+
     private void downloadAndInstallApk(String url, String expectedSha256) {
-        if (updateInProgress) return;
+        if (updateInProgress || url == null) return;
 
         // Android 8+: нужно разрешение "Установка неизвестных приложений" для X5 Planer
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !getPackageManager().canRequestPackageInstalls()) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Нужно разрешение")
-                    .setMessage("Чтобы установить обновление, разрешите X5 Planer устанавливать приложения. После этого вернитесь назад — установка продолжится сама.")
-                    .setCancelable(false)
-                    .setPositiveButton("Открыть настройки", (d, w) -> {
+            renderUpdateSheet("🔓", "Одно разрешение",
+                    "Android попросит разрешить X5 Planer устанавливать обновления.\n"
+                            + "Включите переключатель и вернитесь назад — обновление продолжится само.",
+                    -1, "Разрешить", () -> {
                         waitingInstallPermission = true;
                         Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                         intent.setData(Uri.parse("package:" + getPackageName()));
                         startActivity(intent);
-                    })
-                    .show();
+                    }, true);
             return;
         }
 
         // Этот же файл уже скачан и проверен — не качаем заново
         if (readyApkFile != null && readyApkFile.exists() && expectedSha256 != null
                 && expectedSha256.equalsIgnoreCase(readyApkSha256)) {
-            launchInstaller(readyApkFile);
+            installApk(readyApkFile);
             return;
         }
 
-        try {
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-            request.setTitle("Обновление X5 Planer");
-            request.setDescription("Загрузка новой версии приложения...");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+        // Качаем сами в папку приложения: без системного менеджера загрузок, который на части
+        // телефонов при обрыве связи начинает заново с 0% или вовсе не отдаёт файл
+        updateInProgress = true;
+        renderUpdateSheet("⬇️", "Скачиваем обновление", "0%", 0, null, null, false);
+        final File dir = new File(getCacheDir(), "updates");
+        new Thread(() -> {
+            File apk = null;
+            String error = null;
+            try {
+                if (!dir.exists()) dir.mkdirs();
+                File[] old = dir.listFiles();
+                if (old != null) for (File f : old) f.delete();
+                apk = new File(dir, "update_" + System.currentTimeMillis() + ".apk");
 
-            // Папка приложения: файл принадлежит нам, FileProvider сможет отдать его установщику.
-            // Старые скачанные APK удаляем, чтобы не копились.
-            File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-            if (dir != null && dir.listFiles() != null) {
-                for (File old : dir.listFiles()) {
-                    if (old.getName().endsWith(".apk")) old.delete();
-                }
-            }
-            String fileName = "update_" + System.currentTimeMillis() + ".apk";
-            request.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName);
-
-            final DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            if (manager != null) {
-                final long expectedDownloadId = manager.enqueue(request);
-                downloadId = expectedDownloadId;
-                updateInProgress = true;
-                showDownloadProgress(manager, expectedDownloadId);
-
-                BroadcastReceiver onComplete = new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                        if (expectedDownloadId == id) {
-                            verifyAndInstallApk(manager, id, expectedSha256);
-                            try {
-                                unregisterReceiver(this);
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                // Связь оборвалась — докачиваем с того же места (Range), а не начинаем с 0%
+                long done = 0, total = -1;
+                int lastPct = -1;
+                for (int attempt = 1; ; attempt++) {
+                    HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+                    conn.setConnectTimeout(20000);
+                    conn.setReadTimeout(30000);
+                    conn.setInstanceFollowRedirects(true);
+                    if (done > 0) conn.setRequestProperty("Range", "bytes=" + done + "-");
+                    try {
+                        int code = conn.getResponseCode();
+                        boolean append = false;
+                        if (code == HttpURLConnection.HTTP_PARTIAL && done > 0) {
+                            append = true;
+                            if (total < 0) total = done + conn.getContentLengthLong();
+                        } else if (code == HttpURLConnection.HTTP_OK) {
+                            done = 0; // сервер не умеет докачку — качаем заново
+                            total = conn.getContentLengthLong();
+                        } else {
+                            throw new java.io.IOException("HTTP " + code);
+                        }
+                        try (InputStream in = new BufferedInputStream(conn.getInputStream());
+                             OutputStream out = new FileOutputStream(apk, append)) {
+                            byte[] buf = new byte[64 * 1024];
+                            int n;
+                            while ((n = in.read(buf)) != -1) {
+                                out.write(buf, 0, n);
+                                done += n;
+                                if (total > 0) {
+                                    int pct = (int) (done * 100 / total);
+                                    if (pct > lastPct) {
+                                        lastPct = pct;
+                                        final int p = pct;
+                                        runOnUiThread(() -> renderUpdateSheet("⬇️", "Скачиваем обновление",
+                                                p + "%", p, null, null, false));
+                                    }
+                                }
                             }
                         }
+                        if (total > 0 && done < total) throw new java.io.IOException("обрыв на " + done + " из " + total);
+                        break;
+                    } catch (java.io.IOException e) {
+                        if (attempt >= 6) throw e;
+                        final int shown = Math.max(lastPct, 0);
+                        runOnUiThread(() -> renderUpdateSheet("📶", "Связь прервалась",
+                                "Докачиваем с " + shown + "%…", shown, null, null, false));
+                        Thread.sleep(2000L * attempt);
+                    } finally {
+                        conn.disconnect();
                     }
-                };
+                }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    registerReceiver(onComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED);
+                if (expectedSha256 != null && !expectedSha256.isEmpty()) {
+                    String actual = computeSha256(apk);
+                    if (actual == null || !actual.equalsIgnoreCase(expectedSha256)) {
+                        android.util.Log.e("X5PLANER_UPDATE", "Хэш скачанного APK не совпал с ожидаемым — установка отменена");
+                        apk.delete();
+                        error = "Файл скачался с ошибкой.";
+                        reportUpdateProblem("sha256", -1, "mismatch: " + actual);
+                    }
                 } else {
-                    registerReceiver(onComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+                    android.util.Log.w("X5PLANER_UPDATE", "apkSha256 не задан в Firebase — устанавливаем без проверки целостности");
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+                error = "Не удалось скачать обновление — проверьте интернет.";
+                reportUpdateProblem("download", -1, String.valueOf(e));
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            onUpdateFailed("Не удалось начать скачивание обновления");
-        }
-    }
 
-    private AlertDialog progressDialog = null;
-
-    // Окно с процентом загрузки, обновляется раз в полсекунды
-    private void showDownloadProgress(DownloadManager manager, long id) {
-        progressDialog = new AlertDialog.Builder(this)
-                .setTitle("Обновление X5 Planer")
-                .setMessage("Скачивание... 0%")
-                .setCancelable(false)
-                .show();
-
-        final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (!updateInProgress || downloadId != id || progressDialog == null || !progressDialog.isShowing()) return;
-                Cursor c = manager.query(new DownloadManager.Query().setFilterById(id));
-                if (c != null && c.moveToFirst()) {
-                    long done = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
-                    long total = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
-                    c.close();
-                    if (total > 0) progressDialog.setMessage("Скачивание... " + (done * 100 / total) + "%");
-                } else if (c != null) {
-                    c.close();
+            final File result = apk;
+            final String err = error;
+            runOnUiThread(() -> {
+                updateInProgress = false;
+                if (err != null) {
+                    showUpdateErrorDialog(err);
+                    return;
                 }
-                handler.postDelayed(this, 500);
-            }
-        });
-    }
-
-    private void dismissDownloadProgress() {
-        if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
-        progressDialog = null;
-    }
-
-    // Сообщает об ошибке и снова предлагает обновиться
-    private void onUpdateFailed(String message) {
-        updateInProgress = false;
-        dismissDownloadProgress();
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-        if (pendingApkUrl != null) showUpdateDialog(pendingApkUrl, pendingApkSha256);
+                readyApkFile = result;
+                readyApkSha256 = expectedSha256;
+                installApk(result);
+            });
+        }).start();
     }
 
     private String computeSha256(File file) {
@@ -440,75 +568,130 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void verifyAndInstallApk(DownloadManager manager, long id, String expectedSha256) {
-        DownloadManager.Query query = new DownloadManager.Query();
-        query.setFilterById(id);
-        Cursor cursor = manager.query(query);
-
-        if (cursor == null) {
-            onUpdateFailed("Ошибка обновления: не удалось получить статус загрузки");
-            return;
-        }
-        if (!cursor.moveToFirst()) {
-            cursor.close();
-            onUpdateFailed("Ошибка обновления: загрузка не найдена");
-            return;
-        }
-        int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-        int status = statusIndex != -1 ? cursor.getInt(statusIndex) : -1;
-        if (status != DownloadManager.STATUS_SUCCESSFUL) {
-            cursor.close();
-            onUpdateFailed("Загрузка обновления не завершилась успешно");
-            return;
-        }
-        int columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
-        if (columnIndex == -1) {
-            cursor.close();
-            onUpdateFailed("Ошибка обновления: файл не найден");
-            return;
-        }
-        String downloadUriString = cursor.getString(columnIndex);
-        cursor.close();
-        if (downloadUriString == null) {
-            onUpdateFailed("Ошибка обновления: файл не найден");
-            return;
-        }
-
-        File file = new File(Uri.parse(downloadUriString).getPath());
-
-        if (expectedSha256 != null && !expectedSha256.isEmpty()) {
-            String actualSha256 = computeSha256(file);
-            if (actualSha256 == null || !actualSha256.equalsIgnoreCase(expectedSha256)) {
-                android.util.Log.e("X5PLANER_UPDATE", "Хэш скачанного APK не совпал с ожидаемым — установка отменена");
-                file.delete();
-                onUpdateFailed("Файл обновления повреждён или подменён, установка отменена");
-                return;
+    // Установка через PackageInstaller: телефон сообщает результат (UpdateInstallReceiver),
+    // поэтому причина отказа видна и пользователю, и нам (update_errors в Firebase)
+    private void installApk(File apk) {
+        renderUpdateSheet("📦", "Устанавливаем", "Подтвердите установку в окне Android.", 100, null, null, false);
+        new Thread(() -> {
+            try {
+                PackageInstaller installer = getPackageManager().getPackageInstaller();
+                PackageInstaller.SessionParams params =
+                        new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+                params.setAppPackageName(getPackageName());
+                params.setSize(apk.length());
+                int sessionId = installer.createSession(params);
+                try (PackageInstaller.Session session = installer.openSession(sessionId)) {
+                    try (InputStream in = new FileInputStream(apk);
+                         OutputStream out = session.openWrite("base.apk", 0, apk.length())) {
+                        byte[] buf = new byte[64 * 1024];
+                        int n;
+                        while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                        session.fsync(out);
+                    }
+                    Intent callback = new Intent(this, UpdateInstallReceiver.class);
+                    int flags = PendingIntent.FLAG_UPDATE_CURRENT
+                            | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0);
+                    PendingIntent pending = PendingIntent.getBroadcast(this, sessionId, callback, flags);
+                    session.commit(pending.getIntentSender());
+                }
+            } catch (Exception e) {
+                // Сессия не создалась — пробуем обычный установщик Android
+                e.printStackTrace();
+                reportUpdateProblem("session", -1, String.valueOf(e));
+                runOnUiThread(() -> installViaIntent(apk));
             }
-        } else {
-            android.util.Log.w("X5PLANER_UPDATE", "apkSha256 не задан в Firebase — устанавливаем без проверки целостности");
-        }
-
-        updateInProgress = false;
-        dismissDownloadProgress();
-        readyApkFile = file;
-        readyApkSha256 = expectedSha256;
-        launchInstaller(file);
+        }).start();
     }
 
-    private void launchInstaller(File file) {
+    private void installViaIntent(File file) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Uri apkUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
         intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
         try {
             installerLaunched = true;
             startActivity(intent);
         } catch (Exception e) {
             installerLaunched = false;
             e.printStackTrace();
-            onUpdateFailed("Не удалось запустить установку обновления");
+            reportUpdateProblem("intent", -1, String.valueOf(e));
+            showUpdateErrorDialog("Не удалось открыть установку.");
+        }
+    }
+
+    // Вызывается из UpdateInstallReceiver: Android просит подтвердить установку — показываем его окно
+    void onInstallConfirmationRequired(Intent confirm) {
+        installerLaunched = true;
+        try {
+            startActivity(confirm);
+        } catch (Exception e) {
+            installerLaunched = false;
+            reportUpdateProblem("confirm", -1, String.valueOf(e));
+            showUpdateErrorDialog("Не удалось открыть установку.");
+        }
+    }
+
+    // Вызывается из UpdateInstallReceiver, когда установка не прошла
+    void onInstallFailed(int status, String systemMessage) {
+        installerLaunched = false;
+        if (status == PackageInstaller.STATUS_FAILURE_ABORTED) {
+            // Человек сам нажал «Отмена» / «Не устанавливать» — подсказываем, а не пугаем ошибкой
+            showInstallCancelled();
+            return;
+        }
+        reportUpdateProblem("install", status, systemMessage);
+        String text;
+        switch (status) {
+            case PackageInstaller.STATUS_FAILURE_BLOCKED:
+                text = "Телефон заблокировал установку (Google Play Protect или защита телефона).";
+                break;
+            case PackageInstaller.STATUS_FAILURE_CONFLICT:
+                text = "Новая версия конфликтует с установленным приложением.";
+                break;
+            case PackageInstaller.STATUS_FAILURE_STORAGE:
+                text = "На телефоне не хватает памяти — освободите место.";
+                break;
+            case PackageInstaller.STATUS_FAILURE_INCOMPATIBLE:
+                text = "Новая версия несовместима с этим телефоном.";
+                break;
+            case PackageInstaller.STATUS_FAILURE_INVALID:
+                text = "Файл обновления повреждён.";
+                break;
+            default:
+                text = "Установка не удалась.";
+        }
+        showUpdateErrorDialog(text);
+    }
+
+    // Запасной путь, который работает всегда: скачать APK браузером и открыть файл
+    private void openUpdateInBrowser() {
+        if (pendingApkUrl == null) return;
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(pendingApkUrl)));
+            Toast.makeText(this, "Когда файл скачается — откройте его и нажмите «Установить»", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Откройте в браузере: " + pendingApkUrl, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    // Причина неудачного обновления уходит в Firebase (update_errors), чтобы её было видно разработчику
+    private void reportUpdateProblem(String stage, int status, String message) {
+        try {
+            String user = getSharedPreferences("AppSession", MODE_PRIVATE).getString("userData", "");
+            String[] parts = user.split("\\|");
+            java.util.Map<String, Object> rec = new java.util.HashMap<>();
+            rec.put("stage", stage);
+            rec.put("status", status);
+            rec.put("message", message == null ? "" : message);
+            rec.put("fromVersion", getCurrentVersionCode());
+            rec.put("toVersion", pendingVersionCode);
+            rec.put("device", Build.MANUFACTURER + " " + Build.MODEL);
+            rec.put("android", Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + ")");
+            rec.put("user", parts.length >= 2 ? parts[0] + " " + parts[1] : "");
+            rec.put("ts", com.google.firebase.database.ServerValue.TIMESTAMP);
+            FirebaseDatabase.getInstance().getReference("update_errors").push().setValue(rec);
+        } catch (Exception ignored) {
         }
     }
 

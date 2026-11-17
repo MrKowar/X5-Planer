@@ -47,6 +47,18 @@
             android:name=".GeoTrackingService"
             android:foregroundServiceType="location"
             android:exported="false" />
+        <!-- После обновления — уведомление «Нажмите, чтобы открыть» -->
+        <receiver
+            android:name=".UpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <!-- Результат установки обновления (PackageInstaller) -->
+        <receiver
+            android:name=".UpdateInstallReceiver"
+            android:exported="false" />
         <!-- Добавляем FileProvider для установки APK -->
         <provider
             android:name="androidx.core.content.FileProvider"
