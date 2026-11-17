@@ -533,6 +533,17 @@ public class MainActivity extends AppCompatActivity {
             return GeoTrackingService.isRunning;
         }
 
+        // Кто на смене и куда в Firebase писать сбои геолокации (путь уже с безопасным именем полигона)
+        @android.webkit.JavascriptInterface
+        public void setTrackingUser(String userKey, String name, String polygon, String incidentsPath) {
+            getSharedPreferences(GeoTrackingService.INCIDENT_PREFS, MODE_PRIVATE).edit()
+                    .putString("user_key", userKey)
+                    .putString("user_name", name)
+                    .putString("polygon", polygon)
+                    .putString("incidents_path", incidentsPath)
+                    .apply();
+        }
+
         // Сохраняет даты, в которые у пользователя стоит смена (JSON-массив "yyyy-MM-dd").
         // Напоминание об отчёте приходит только в эти дни.
         @android.webkit.JavascriptInterface

@@ -232,6 +232,58 @@
   width: 100%;
   filter: drop-shadow(0 0 23px var(--animation-color));
 }
+
+/* === Блокировка «Я на линии»: цепь, замок, ключ === */
+.shift-lock-wrap { position: relative; width: fit-content; margin: 0 auto; }
+.shift-lock-wrap.locked .btn-neon { opacity: .45; filter: grayscale(1); }
+.shift-lock-layer { display: none; position: absolute; left: 50%; top: 50%; width: 320px; max-width: calc(100vw - 32px); height: 100px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
+.shift-lock-wrap.locked .shift-lock-layer { display: block; }
+.lock-chain { width: 100%; height: 100%; overflow: visible; }
+.chain-reveal { fill: none; stroke: #fff; stroke-width: 18; stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.chain-links { fill: none; stroke: #6b7580; stroke-width: 7; stroke-linecap: round; stroke-dasharray: 11 6; }
+.chain-shine { fill: none; stroke: #d5dbe1; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 11 6; }
+.lock-pad { position: absolute; left: 50%; top: 50%; width: 46px; height: 54px; margin: -30px 0 0 -23px; overflow: visible; filter: drop-shadow(0 3px 4px rgba(0,0,0,.3)); }
+.lock-shackle { fill: none; stroke: #7a8590; stroke-width: 5; stroke-linecap: round; }
+.lock-body { fill: #f2b705; stroke: #a87c00; stroke-width: 2; }
+.lock-hole { fill: #5c4300; }
+.shift-lock-info { display: none; text-align: center; font-size: 13px; color: #b71c1c; margin: 12px 16px 10px; line-height: 1.4; }
+.shift-lock-wrap.locked .shift-lock-info { display: block; }
+.shift-lock-reason { color: #666; font-size: 12px; margin-top: 2px; }
+
+/* Закрытие: цепи «наползают» змейкой, замок падает и защёлкивается */
+.shift-lock-layer.closing .chain-reveal { animation: chainDraw .9s cubic-bezier(.45,0,.2,1) both; }
+.shift-lock-layer.closing .chain-reveal-b { animation-delay: .2s; }
+.shift-lock-layer.closing .lock-pad { animation: lockDrop .45s cubic-bezier(.3,1.4,.5,1) .85s both; }
+.shift-lock-layer.closing .lock-shackle { animation: shackleSnap .25s ease-in 1.2s both; }
+.shift-lock-layer.closing .lock-body { animation: lockThud .3s ease-out 1.42s; }
+@keyframes chainDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes lockDrop { from { transform: translateY(-46px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes shackleSnap { from { transform: translateY(-7px); } to { transform: none; } }
+@keyframes lockThud { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px) scaleY(.96); } }
+
+/* Открытие: дужка выскакивает, замок падает, цепи сползают */
+.shift-lock-layer.opening .lock-shackle { transform-box: fill-box; transform-origin: 100% 100%; animation: shackleOpen .35s ease-out both; }
+.shift-lock-layer.opening .lock-pad { animation: lockFall .6s ease-in .4s both; }
+.shift-lock-layer.opening .chain-reveal { animation: chainUndraw .7s ease-in .55s both; }
+@keyframes shackleOpen { to { transform: translateY(-8px) rotate(-28deg); } }
+@keyframes lockFall { to { transform: translateY(60px) rotate(18deg); opacity: 0; } }
+@keyframes chainUndraw { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -1; } }
+
+.shift-lock-layer .lock-pad.shake { animation: lockShake .4s ease-in-out; }
+@keyframes lockShake { 20%, 60% { transform: rotate(-12deg); } 40%, 80% { transform: rotate(12deg); } }
+
+.shift-lock-key { position: fixed; right: 12px; top: 45%; width: 72px; height: 36px; padding: 4px; z-index: 2500; display: none; touch-action: none; cursor: grab; border-radius: 18px; background: rgba(255,248,225,.95); box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.shift-lock-key.visible { display: block; animation: keyIn .5s cubic-bezier(.3,1.4,.5,1) both, keyWiggle 2.4s ease-in-out .8s infinite; }
+.shift-lock-key.dragging { animation: none; cursor: grabbing; transition: none; }
+.shift-lock-key:not(.dragging) { transition: transform .3s cubic-bezier(.3,1.4,.5,1); }
+.shift-lock-key svg { width: 100%; height: 100%; fill: #e0a800; }
+.shift-lock-key .key-hole { fill: #fff8e1; }
+@keyframes keyIn { from { transform: translateX(90px); } to { transform: none; } }
+@keyframes keyWiggle { 0%, 70%, 100% { rotate: 0deg; } 80% { rotate: -12deg; } 90% { rotate: 8deg; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .shift-lock-layer.closing *, .shift-lock-layer.opening *, .shift-lock-key.visible { animation-duration: .01s !important; animation-delay: 0s !important; }
+}
         /* === АНИМИРОВАННОЕ УВЕДОМЛЕНИЕ (ТОСТ) === */
 
         /* === НОВЫЕ УВЕДОМЛЕНИЯ СВЕРХУ СПРАВА === */
@@ -515,6 +567,13 @@
             <input type="date" id="adminReportDate" onchange="loadAdminReports()" style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 8px;">
             <div id="reportsContainer" style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;"></div>
         </div>
+        <div class="card" style="display:flex; flex-direction:column; background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px; margin-top: 16px;">
+            <h3 style="margin-top:0; border-bottom: 2px solid var(--danger); padding-bottom: 12px; color: #222;">📍 Сбои геолокации</h3>
+            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Записываются автоматически у курьеров на линии: с какого по какое время телефон был вне зоны или не выдавал координаты.</div>
+            <input type="date" id="geoIncidentsDate" onchange="loadGeoIncidents()" style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 8px;">
+            <div id="geoIncidentsSummary" style="margin-top: 14px;"></div>
+            <div id="geoIncidentsList" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
     </div>
 
     <div id="analyticsTab" style="display: none;">
@@ -672,7 +731,9 @@
     }
 
     function startShift() {
+        if (isShiftBlocked()) { onBlockedShiftTap(); return; }
         if (!navigator.geolocation) { showToast("GPS недоступен на этом устройстве"); return; }
+        syncTrackingUserToNative();
         isOnShift = true;
         updateShiftButtonsUI();
         checkGeoPosition();
@@ -719,7 +780,218 @@
             if (!shiftWatchInterval) shiftWatchInterval = setInterval(checkGeoPosition, 60000);
             updateShiftButtonsUI();
         }
+        // Блокировка из кэша — работает и без сети
+        initShiftLockLayer();
+        shiftBlock = readCachedShiftBlock();
+        applyShiftBlock(true);
     });
+
+    // Передаёт службе геотрекинга, кто на смене и куда писать сбои геолокации
+    function syncTrackingUserToNative() {
+        if (!(window.AndroidApp && window.AndroidApp.setTrackingUser) || !currentUser.firstName) return;
+        try {
+            window.AndroidApp.setTrackingUser(
+                currentUser.firstName + '_' + currentUser.lastName,
+                currentUser.firstName + ' ' + currentUser.lastName,
+                currentUser.polygon || '',
+                getPolyPath(currentUser.polygon, 'geo_incidents'));
+        } catch (e) { console.log('setTrackingUser: ' + e.message); }
+    }
+
+    // ---------- БЛОКИРОВКА «Я НА ЛИНИИ» (штрафные часы от суперадмина) ----------
+    // Блокировка лежит в polygons/<полигон>/shift_blocks/<userKey> = { from, until, reason, by }.
+    // Копия хранится в телефоне, поэтому замок работает и без сети. Когда время вышло,
+    // сбоку появляется ключ — пока его не перетащить на замок, кнопка остаётся закрытой.
+    const SHIFT_BLOCK_KEY = 'shiftBlock';
+    const SHIFT_BLOCK_OPENED_KEY = 'shiftBlockOpenedUntil';
+    let shiftBlock = null;
+    let shiftLockShown = false;
+    let shiftLockTimer = null;
+
+    function readCachedShiftBlock() {
+        try { return JSON.parse(localStorage.getItem(SHIFT_BLOCK_KEY) || 'null'); } catch (e) { return null; }
+    }
+
+    function setShiftBlock(block) {
+        let wasBlocked = isShiftBlocked();
+        shiftBlock = (block && block.until) ? block : null;
+        try {
+            if (shiftBlock) localStorage.setItem(SHIFT_BLOCK_KEY, JSON.stringify(shiftBlock));
+            else localStorage.removeItem(SHIFT_BLOCK_KEY);
+        } catch (e) {}
+        if (wasBlocked && !shiftBlock) showToast('Блокировка кнопки «Я на линии» снята', 'green');
+        applyShiftBlock(true);
+    }
+
+    let shiftBlockOpenedUntil = null; // копия в памяти — на случай, если хранилище недоступно
+
+    function isShiftBlocked() {
+        if (!shiftBlock) return false;
+        let opened = shiftBlockOpenedUntil;
+        try { opened = localStorage.getItem(SHIFT_BLOCK_OPENED_KEY) || opened; } catch (e) {}
+        return opened !== String(shiftBlock.until);
+    }
+
+    function formatBlockTime(ts) {
+        let d = new Date(ts);
+        let t = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        let sameDay = d.toDateString() === new Date().toDateString();
+        return sameDay ? t : d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) + ' ' + t;
+    }
+
+    function initShiftLockLayer() {
+        let btn = document.getElementById('startShiftBtn');
+        if (!btn || document.getElementById('shiftLockWrap')) return;
+        let wrap = document.createElement('div');
+        wrap.id = 'shiftLockWrap';
+        wrap.className = 'shift-lock-wrap';
+        btn.parentNode.insertBefore(wrap, btn);
+        wrap.appendChild(btn);
+        wrap.insertAdjacentHTML('beforeend', `
+            <div class="shift-lock-layer" id="shiftLockLayer" aria-hidden="true">
+                <svg class="lock-chain" viewBox="0 0 320 100">
+                    <defs>
+                        <mask id="chainMaskA" maskUnits="userSpaceOnUse" x="-20" y="-20" width="360" height="140">
+                            <path class="chain-reveal" pathLength="1" d="M-10 18 C 60 -12, 100 96, 160 50 S 262 2, 330 78"/>
+                        </mask>
+                        <mask id="chainMaskB" maskUnits="userSpaceOnUse" x="-20" y="-20" width="360" height="140">
+                            <path class="chain-reveal chain-reveal-b" pathLength="1" d="M330 18 C 260 -12, 220 96, 160 50 S 58 2, -10 78"/>
+                        </mask>
+                    </defs>
+                    <g mask="url(#chainMaskA)">
+                        <path class="chain-links" d="M-10 18 C 60 -12, 100 96, 160 50 S 262 2, 330 78"/>
+                        <path class="chain-shine" d="M-10 18 C 60 -12, 100 96, 160 50 S 262 2, 330 78"/>
+                    </g>
+                    <g mask="url(#chainMaskB)">
+                        <path class="chain-links" d="M330 18 C 260 -12, 220 96, 160 50 S 58 2, -10 78"/>
+                        <path class="chain-shine" d="M330 18 C 260 -12, 220 96, 160 50 S 58 2, -10 78"/>
+                    </g>
+                </svg>
+                <svg class="lock-pad" id="lockPad" viewBox="0 0 48 56">
+                    <path class="lock-shackle" d="M14 27 V17 a10 10 0 0 1 20 0 V27"/>
+                    <rect class="lock-body" x="6" y="25" width="36" height="28" rx="7"/>
+                    <circle cx="24" cy="37" r="4" class="lock-hole"/>
+                    <rect x="22.5" y="39" width="3" height="7" rx="1.5" class="lock-hole"/>
+                </svg>
+            </div>
+            <div class="shift-lock-info" id="shiftLockInfo"></div>
+        `);
+        document.body.insertAdjacentHTML('beforeend', `
+            <div class="shift-lock-key" id="shiftLockKey" aria-label="Ключ — перетащите на замок">
+                <svg viewBox="0 0 64 28"><circle cx="13" cy="14" r="10"/><circle cx="13" cy="14" r="4" class="key-hole"/>
+                <path d="M22 11 H60 V17 H54 V23 H48 V17 H42 V21 H36 V17 H22 Z"/></svg>
+            </div>`);
+        initShiftLockKeyDrag();
+        document.addEventListener('visibilitychange', () => {
+            // Экран снова включился — проигрываем анимацию замка заново
+            if (document.visibilityState === 'visible' && shiftLockShown) applyShiftBlock(true);
+        });
+    }
+
+    function applyShiftBlock(animate) {
+        let layer = document.getElementById('shiftLockLayer');
+        if (!layer) return;
+        let wrap = document.getElementById('shiftLockWrap');
+        let info = document.getElementById('shiftLockInfo');
+        let key = document.getElementById('shiftLockKey');
+
+        if (!isShiftBlocked()) {
+            clearInterval(shiftLockTimer); shiftLockTimer = null;
+            key.classList.remove('visible');
+            if (shiftLockShown) playShiftUnlock();
+            return;
+        }
+
+        // Заблокировано — с линии снимаем, кнопка не работает
+        if (isOnShift) {
+            endShift();
+            showToast('Кнопка «Я на линии» заблокирована администратором', 'red');
+        }
+        shiftLockShown = true;
+        wrap.classList.add('locked');
+        info.innerHTML = `🔒 Заблокировано с <b>${formatBlockTime(shiftBlock.from || Date.now())}</b> до <b>${formatBlockTime(shiftBlock.until)}</b>`
+            + (shiftBlock.reason ? `<div class="shift-lock-reason">${escapeHtml(shiftBlock.reason)}</div>` : '');
+        if (animate) {
+            layer.classList.remove('closing', 'opening');
+            void layer.offsetWidth; // перезапуск CSS-анимации
+            layer.classList.add('closing');
+            setTimeout(() => { if (navigator.vibrate) navigator.vibrate(35); }, 1250);
+        }
+        updateShiftLockExpiry();
+        if (!shiftLockTimer) shiftLockTimer = setInterval(updateShiftLockExpiry, 1000);
+    }
+
+    // Время вышло (по часам телефона, сеть не нужна) — показываем ключ
+    function updateShiftLockExpiry() {
+        if (!isShiftBlocked()) return;
+        let expired = Date.now() >= shiftBlock.until;
+        let key = document.getElementById('shiftLockKey');
+        if (expired && !key.classList.contains('visible')) {
+            key.classList.add('visible');
+            document.getElementById('shiftLockInfo').innerHTML = '⏰ Время блокировки вышло — перетащите ключ 🔑 на замок';
+        }
+    }
+
+    function playShiftUnlock() {
+        let layer = document.getElementById('shiftLockLayer');
+        let wrap = document.getElementById('shiftLockWrap');
+        shiftLockShown = false;
+        layer.classList.remove('closing');
+        void layer.offsetWidth;
+        layer.classList.add('opening');
+        if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+        setTimeout(() => {
+            if (shiftLockShown) return; // за время анимации пришла новая блокировка
+            layer.classList.remove('opening');
+            wrap.classList.remove('locked');
+            document.getElementById('shiftLockInfo').innerHTML = '';
+        }, 1300);
+    }
+
+    function onBlockedShiftTap() {
+        let pad = document.getElementById('lockPad');
+        if (pad) { pad.classList.remove('shake'); void pad.getBoundingClientRect(); pad.classList.add('shake'); }
+        if (navigator.vibrate) navigator.vibrate(60);
+        let expired = shiftBlock && Date.now() >= shiftBlock.until;
+        showToast(expired ? 'Перетащите ключ 🔑 на замок, чтобы открыть кнопку'
+                          : 'Кнопка заблокирована до ' + formatBlockTime(shiftBlock.until), 'red');
+    }
+
+    function openShiftLockWithKey() {
+        shiftBlockOpenedUntil = String(shiftBlock.until);
+        try { localStorage.setItem(SHIFT_BLOCK_OPENED_KEY, String(shiftBlock.until)); } catch (e) {}
+        document.getElementById('shiftLockKey').classList.remove('visible');
+        clearInterval(shiftLockTimer); shiftLockTimer = null;
+        playShiftUnlock();
+        showToast('Замок открыт — кнопка «Я на линии» снова работает', 'green');
+    }
+
+    function initShiftLockKeyDrag() {
+        let key = document.getElementById('shiftLockKey');
+        let startX = 0, startY = 0, dragging = false;
+        key.addEventListener('pointerdown', e => {
+            dragging = true; startX = e.clientX; startY = e.clientY;
+            key.setPointerCapture(e.pointerId);
+            key.classList.add('dragging');
+        });
+        key.addEventListener('pointermove', e => {
+            if (!dragging) return;
+            key.style.transform = `translate(${e.clientX - startX}px, ${e.clientY - startY}px) rotate(-20deg)`;
+        });
+        let finish = e => {
+            if (!dragging) return;
+            dragging = false;
+            key.classList.remove('dragging');
+            // Попадание считаем по месту, где отпустили палец, — так надёжнее, чем по картинке ключа
+            let pad = document.getElementById('lockPad').getBoundingClientRect();
+            let kx = e.clientX, ky = e.clientY;
+            let hit = kx > pad.left - 40 && kx < pad.right + 40 && ky > pad.top - 40 && ky < pad.bottom + 40;
+            key.style.transform = '';
+            if (hit && isShiftBlocked() && Date.now() >= shiftBlock.until) openShiftLockWithKey();
+        };
+        key.addEventListener('pointerup', finish);
+        key.addEventListener('pointercancel', finish);
+    }
 
         function getPolyPath(poly, path) {
         if (!poly) {
@@ -806,7 +1078,7 @@
     let rainyDays = [];
     let profitableDays = {};
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-    const APP_VERSION = 15
+    const APP_VERSION = 16
     ; // Обновлена версия для вызова модалки
         function saveOfflineCache(key, data) {
         try {
@@ -1151,6 +1423,22 @@
                                 ${cardsHtml}
                             </div>
                         </div>
+                        <div style="background: white; padding: 24px; border-radius: 16px; border: 1px solid #e0e0e0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                            <h3 style="margin-top: 0; color: #333; font-size: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 16px; margin-bottom: 16px;">🔒 Блокировка «Я на линии»</h3>
+                            <div style="font-size: 13px; color: #666; margin-bottom: 14px;">Штрафные часы: на это время кнопка у сотрудника не работает. Блокировка дойдёт до телефона, как только у него появится сеть.</div>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <select id="blockUserSelect" style="padding: 12px; border-radius: 8px; border: 1px solid #ced4da;"></select>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                    <label style="font-size: 13px;">Штрафных часов <input type="number" id="blockHours" min="0.25" step="0.25" value="1" oninput="updateBlockPreview()" style="width: 80px; padding: 10px; border-radius: 8px; border: 1px solid #ced4da;"></label>
+                                    <label style="font-size: 13px;">или до <input type="datetime-local" id="blockUntil" oninput="updateBlockPreview()" style="padding: 10px; border-radius: 8px; border: 1px solid #ced4da;"></label>
+                                </div>
+                                <input type="text" id="blockReason" maxlength="120" placeholder="Причина (её увидит сотрудник)" style="padding: 12px; border-radius: 8px; border: 1px solid #ced4da;">
+                                <div id="blockPreview" style="font-size: 13px; color: #b71c1c;"></div>
+                                <button class="btn-danger" onclick="createShiftBlock()" style="padding: 12px; border-radius: 8px;">🔒 Заблокировать кнопку</button>
+                            </div>
+                            <h4 style="margin: 20px 0 10px;">Действующие блокировки</h4>
+                            <div id="activeShiftBlocks" style="display: flex; flex-direction: column; gap: 8px;"><div style="color:#888;">Загрузка...</div></div>
+                        </div>
                     </div>
                 `;
                 document.getElementById('mainScreen').appendChild(tabDiv);
@@ -1232,6 +1520,7 @@
             saveOfflineCache('offline_schedules', data);
             globalUsersData = data;
             if (isAdmin) loadEmployees();
+            if (role === 'superadmin') renderBlockUserSelect();
             resolveFifthShiftQueue();
         });
 
@@ -1256,6 +1545,16 @@
 
         listenForVacationOffers();
         listenMySupportThread();
+
+        // Блокировка кнопки «Я на линии» — приходит, как только появится сеть
+        syncTrackingUserToNative();
+        attachListener(getPolyPath(poly, `shift_blocks/${userKey}`), 'value', snap => setShiftBlock(snap.val()));
+        if (isAdmin) {
+            let gd = document.getElementById('geoIncidentsDate');
+            if (gd && !gd.value) gd.value = getTodayDateStr();
+            loadGeoIncidents();
+        }
+        if (role === 'superadmin') listenAllShiftBlocks();
     }
 
     function checkOnboardingAndChangelog(role) {
@@ -1267,8 +1566,8 @@
         } else if (lastSeenVersion < APP_VERSION) {
             let cl = document.getElementById('changelogContent');
             cl.innerHTML = `<ul>
+                <li><b>📍 Геолокация:</b> Если телефон показывает, что вы вне зоны, приложение перезапускает геолокацию и перепроверяет каждые 10 секунд, пока вы не вернётесь в зону. Делать ничего не нужно.</li>
                 <li><b>🛑 Выход с линии:</b> Исправлено — после «Я НА ЛИНИИ» → выкл. отслеживание и уведомления о зоне полностью останавливаются.</li>
-                <li><b>📍 Геолокация:</b> При выходе из рабочей зоны приложение само перезапускает определение местоположения и перепроверяет точку — меньше ложных предупреждений. В шторке видно «🔄 Перезапуск геолокации…» и результат.</li>
                 <li><b>🔔 Напоминания об отчёте:</b> Теперь приходят только в те дни, когда у вас стоит смена.</li>
                 <li><b>💬 Новая поддержка:</b> Удобный чат с разработчиком — видно историю переписки и ответы прямо в приложении.</li>
                 <li><b>🔄 Обновления:</b> Новые версии приложения теперь скачиваются и устанавливаются надёжнее.</li>
@@ -2555,6 +2854,145 @@ function submitReport(isNoComment) {
         }
         if (!html) html = '<p>Сотрудники на этом полигоне не найдены.</p>';
         container.innerHTML = html;
+    }
+
+    // ---------- СБОИ ГЕОЛОКАЦИИ (отчёт для админа полигона и суперадмина) ----------
+    let geoIncidentsRef = null;
+    let geoIncidentsCb = null;
+
+    function loadGeoIncidents() {
+        if (!isAdmin) return;
+        let d = document.getElementById('geoIncidentsDate').value;
+        let list = document.getElementById('geoIncidentsList');
+        let summary = document.getElementById('geoIncidentsSummary');
+        if (geoIncidentsRef) geoIncidentsRef.off('value', geoIncidentsCb);
+        if (!d) { summary.innerHTML = ''; list.innerHTML = '<p style="color:#888;">Выберите дату.</p>'; return; }
+        list.innerHTML = '<p style="color:#888;">Загрузка...</p>';
+
+        geoIncidentsRef = db.ref(getPolyPath(currentUser.polygon, `geo_incidents/${d}`));
+        geoIncidentsCb = snap => {
+            let items = Object.values(snap.val() || {}).sort((a, b) => (a.start || 0) - (b.start || 0));
+            if (!items.length) {
+                summary.innerHTML = '';
+                list.innerHTML = '<p style="color:#2e7d32;">✅ Сбоев геолокации за этот день нет.</p>';
+                return;
+            }
+            let fmt = ts => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            let dur = sec => sec < 60 ? `${sec} с` : `${Math.round(sec / 60)} мин`;
+            let perUser = {};
+            items.forEach(it => {
+                let u = perUser[it.userKey] || (perUser[it.userKey] = { name: it.name || it.userKey, count: 0, sec: 0 });
+                u.count++; u.sec += it.durationSec || 0;
+            });
+            let users = Object.values(perUser).sort((a, b) => b.sec - a.sec);
+            summary.innerHTML = `<div style="font-weight:bold; margin-bottom:6px;">Всего сбоев: ${items.length} · сотрудников: ${users.length}</div>`
+                + users.map(u => `<div style="font-size:13px;">${escapeHtml(u.name)} — ${u.count} раз, ${dur(u.sec)}</div>`).join('');
+            list.innerHTML = items.map(it => {
+                let kind = it.kind === 'no_fix' ? '📡 телефон не выдавал координаты' : '🚷 координаты вне зоны';
+                let end = it.resolved ? '✅ вернулся в зону' : '⏹ закрыт выходом с линии';
+                return `<div style="padding: 12px; background: #fff5f5; border: 1px solid #f5c2c7; border-radius: 8px;">
+                    <b>${escapeHtml(it.name || it.userKey)}</b>
+                    <div style="font-size: 14px; margin-top: 4px;">🕒 ${fmt(it.start)} – ${fmt(it.end)} (${dur(it.durationSec || 0)})</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 2px;">${kind} · перезапусков: ${it.attempts || 0} · ${end}</div>
+                </div>`;
+            }).join('');
+        };
+        geoIncidentsRef.on('value', geoIncidentsCb);
+    }
+
+    // ---------- БЛОКИРОВКИ «Я НА ЛИНИИ»: панель суперадмина ----------
+    let allShiftBlocks = {};
+
+    function listenAllShiftBlocks() {
+        let polys = new Set(POLYGONS);
+        Object.values(globalUsersData || {}).forEach(u => { if (u.polygon) polys.add(u.polygon); });
+        polys.forEach(p => {
+            attachListener(getPolyPath(p, 'shift_blocks'), 'value', snap => {
+                allShiftBlocks[p] = snap.val() || {};
+                renderActiveShiftBlocks();
+            });
+        });
+    }
+
+    function renderBlockUserSelect() {
+        let sel = document.getElementById('blockUserSelect');
+        if (!sel) return;
+        let prev = sel.value;
+        let byPoly = {};
+        Object.entries(globalUsersData || {}).forEach(([key, u]) => {
+            if (u.role === 'superadmin' || !u.polygon) return;
+            (byPoly[u.polygon] = byPoly[u.polygon] || []).push({ key, name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || key });
+        });
+        sel.innerHTML = '<option value="">— Выберите сотрудника —</option>' + Object.keys(byPoly).sort().map(p =>
+            `<optgroup label="${escapeHtml(p)}">` + byPoly[p].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+                .map(u => `<option value="${escapeHtml(JSON.stringify([u.key, p]))}">${escapeHtml(u.name)}</option>`).join('') + '</optgroup>'
+        ).join('');
+        sel.value = prev;
+        updateBlockPreview();
+    }
+
+    function getBlockUntil() {
+        let exact = document.getElementById('blockUntil').value;
+        if (exact) return new Date(exact).getTime();
+        let hours = parseFloat(document.getElementById('blockHours').value);
+        return hours > 0 ? Date.now() + hours * 3600000 : 0;
+    }
+
+    function updateBlockPreview() {
+        let el = document.getElementById('blockPreview');
+        if (!el) return;
+        let until = getBlockUntil();
+        el.textContent = until > Date.now() ? `Будет заблокировано с ${formatBlockTime(Date.now())} до ${formatBlockTime(until)}` : '';
+    }
+
+    function createShiftBlock() {
+        let raw = document.getElementById('blockUserSelect').value;
+        if (!raw) { showToast('Выберите сотрудника', 'red'); return; }
+        let [userKey, poly] = JSON.parse(raw);
+        let until = getBlockUntil();
+        if (!(until > Date.now())) { showToast('Укажите штрафные часы или время окончания в будущем', 'red'); return; }
+        let u = globalUsersData[userKey] || {};
+        let block = {
+            from: Date.now(),
+            until: until,
+            reason: document.getElementById('blockReason').value.trim(),
+            name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || userKey,
+            by: `${currentUser.firstName} ${currentUser.lastName}`
+        };
+        db.ref(getPolyPath(poly, `shift_blocks/${userKey}`)).set(block)
+            .then(() => {
+                showToast(`${block.name}: кнопка заблокирована до ${formatBlockTime(until)}`, 'green');
+                document.getElementById('blockReason').value = '';
+                document.getElementById('blockUntil').value = '';
+            })
+            .catch(e => showToast('Не удалось заблокировать: ' + e.message, 'red'));
+    }
+
+    function removeShiftBlock(poly, userKey) {
+        if (!confirm('Снять блокировку?')) return;
+        db.ref(getPolyPath(poly, `shift_blocks/${userKey}`)).remove();
+    }
+
+    function renderActiveShiftBlocks() {
+        let box = document.getElementById('activeShiftBlocks');
+        if (!box) return;
+        let rows = [];
+        Object.entries(allShiftBlocks).forEach(([p, blocks]) => {
+            Object.entries(blocks).forEach(([key, b]) => rows.push({ p, key, b }));
+        });
+        rows.sort((a, b) => (b.b.until || 0) - (a.b.until || 0));
+        if (!rows.length) { box.innerHTML = '<div style="color:#888;">Блокировок нет.</div>'; return; }
+        box.innerHTML = rows.map(({ p, key, b }) => {
+            let active = Date.now() < b.until;
+            return `<div style="padding: 12px; border-radius: 8px; border: 1px solid ${active ? '#f5c2c7' : '#e0e0e0'}; background: ${active ? '#fff5f5' : '#fafafa'}; display: flex; justify-content: space-between; gap: 10px; align-items: center;">
+                <div>
+                    <b>${escapeHtml(b.name || key)}</b> <span style="font-size: 12px; color: #888;">${escapeHtml(p)}</span>
+                    <div style="font-size: 13px;">${active ? '🔒' : '⏰'} ${formatBlockTime(b.from)} – ${formatBlockTime(b.until)}${active ? '' : ' (время вышло, ждёт ключ)'}</div>
+                    ${b.reason ? `<div style="font-size: 12px; color: #666;">${escapeHtml(b.reason)}</div>` : ''}
+                </div>
+                <button class="btn-nav" style="white-space: nowrap;" onclick="removeShiftBlock(${escapeHtml(JSON.stringify(p))}, ${escapeHtml(JSON.stringify(key))})">Снять</button>
+            </div>`;
+        }).join('');
     }
 
     function loadAdminReports() {

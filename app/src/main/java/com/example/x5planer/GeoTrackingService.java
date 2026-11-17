@@ -7,6 +7,7 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -20,6 +21,12 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class GeoTrackingService extends Service {
 
@@ -33,7 +40,13 @@ public class GeoTrackingService extends Service {
     static volatile boolean isRunning = false;
     private static final int RESTART_TOGGLES = 10;
     private static final long RESTART_STEP_MS = 270;
-    private static final long FRESH_FIX_TIMEOUT_MS = 20000;
+    // Пока курьер вне зоны, перезапуск + проверка повторяются каждые 10 с
+    private static final long CYCLE_MS = 10000;
+    static final String INCIDENT_PREFS = "GeoIncidents";
+    private long incidentStartTs = 0;
+    private int incidentCycles = 0;
+    private boolean incidentHadFix = false;
+    private boolean incidentWarned = false;
     private static final int SERVICE_NOTIFICATION_ID = 5000;
     private static final int ZONE_WARNING_NOTIFICATION_ID = 5001;
     private static final int RESTART_NOTIFICATION_ID = 5002;
@@ -75,6 +88,8 @@ public class GeoTrackingService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
         isRunning = true;
+        // Свежий запуск службы — если прошлый сбой не успел закрыться, отправляем его
+        if (locationListener == null && incidentStartTs == 0) flushStaleIncident();
         startLocationUpdates();
         return START_STICKY;
     }
@@ -129,10 +144,14 @@ public class GeoTrackingService extends Service {
         return isPointInPolygon(location.getLatitude(), location.getLongitude(), WORK_ZONE_POLYGON);
     }
 
-    // 10 переключений (выкл/вкл) за 2,7 с, последнее — включение; затем запрос свежей точки
+    // Цикл раз в 10 с, пока курьер вне зоны: 10 переключений (выкл/вкл) за 2,7 с, последнее —
+    // включение, затем ждём свежую точку до конца 10-секундного окна. В зоне — снова раз в минуту.
     private void restartLocationAndRecheck() {
         restartInProgress = true;
-        showRestartNotification("🔄 Перезапуск геолокации…", 0);
+        if (incidentStartTs == 0) startIncident();
+        incidentCycles++;
+        saveOpenIncident();
+        showRestartNotification("🔄 Перезапуск геолокации… (попытка " + incidentCycles + ")", 0);
         for (int step = 1; step <= RESTART_TOGGLES; step++) {
             final boolean turnOn = step % 2 == 0;
             handler.postDelayed(() -> {
@@ -149,7 +168,7 @@ public class GeoTrackingService extends Service {
         verifyListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                finishRecheck(isInZone(location));
+                finishRecheck(isInZone(location), location);
             }
             @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
             @Override public void onProviderEnabled(String provider) {}
@@ -163,28 +182,103 @@ public class GeoTrackingService extends Service {
                 locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, verifyListener, Looper.getMainLooper());
             }
         } catch (SecurityException e) {
-            finishRecheck(false);
+            finishRecheck(false, null);
             return;
         }
-        // Свежая точка не пришла — считаем, что сбой GPS, и предупреждаем как раньше
-        handler.postDelayed(recheckTimeout, FRESH_FIX_TIMEOUT_MS);
+        // Свежая точка не пришла до конца 10-секундного окна — считаем, что сбой GPS
+        handler.postDelayed(recheckTimeout, CYCLE_MS - RESTART_TOGGLES * RESTART_STEP_MS);
     }
 
-    private final Runnable recheckTimeout = () -> finishRecheck(false);
+    private final Runnable recheckTimeout = () -> finishRecheck(false, null);
 
-    private void finishRecheck(boolean inZone) {
+    private void finishRecheck(boolean inZone, @Nullable Location location) {
         if (stopped || !restartInProgress) return;
-        restartInProgress = false;
         handler.removeCallbacks(recheckTimeout);
         if (verifyListener != null) {
             locationManager.removeUpdates(verifyListener);
             verifyListener = null;
         }
+        if (location != null) incidentHadFix = true;
         if (inZone) {
+            restartInProgress = false;
+            finishIncident(true);
             showRestartNotification("✅ Геолокация перезапущена — вы в рабочей зоне", 10000);
         } else {
-            NotificationManagerCompat.from(this).cancel(RESTART_NOTIFICATION_ID);
-            showZoneWarningNotification();
+            // Всё ещё вне зоны (или нет точки) — предупреждаем один раз за сбой и сразу
+            // запускаем следующий 10-секундный цикл
+            if (!incidentWarned) {
+                incidentWarned = true;
+                showZoneWarningNotification();
+            }
+            handler.post(this::restartLocationAndRecheck);
+        }
+    }
+
+    // ---------- ЖУРНАЛ СБОЕВ ГЕО ----------
+    // Сбой = с первой точки вне зоны до возвращения в зону (или выхода с линии). Запись уходит
+    // в офлайн-очередь (MainActivity.enqueueSyncItem) и досылается, когда появится сеть.
+
+    private void startIncident() {
+        incidentStartTs = System.currentTimeMillis();
+        incidentCycles = 0;
+        incidentHadFix = false;
+        incidentWarned = false;
+    }
+
+    private void saveOpenIncident() {
+        getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).edit()
+                .putLong("open_start", incidentStartTs)
+                .putInt("open_cycles", incidentCycles)
+                .putBoolean("open_had_fix", incidentHadFix)
+                .putLong("last_seen", System.currentTimeMillis())
+                .apply();
+    }
+
+    private void finishIncident(boolean resolved) {
+        if (incidentStartTs == 0) return;
+        writeIncident(this, incidentStartTs, System.currentTimeMillis(), incidentCycles, incidentHadFix, resolved);
+        incidentStartTs = 0;
+        incidentCycles = 0;
+        incidentWarned = false;
+        getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).edit()
+                .remove("open_start").remove("open_cycles").remove("open_had_fix").apply();
+    }
+
+    // Сбой, который остался незакрытым (приложение убила система) — дописываем при следующем запуске
+    private void flushStaleIncident() {
+        SharedPreferences prefs = getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
+        long start = prefs.getLong("open_start", 0);
+        if (start == 0) return;
+        long end = prefs.getLong("last_seen", start);
+        writeIncident(this, start, Math.max(end, start), prefs.getInt("open_cycles", 0),
+                prefs.getBoolean("open_had_fix", false), false);
+        prefs.edit().remove("open_start").remove("open_cycles").remove("open_had_fix").apply();
+    }
+
+    private static void writeIncident(Context ctx, long start, long end, int cycles, boolean hadFix, boolean resolved) {
+        SharedPreferences prefs = ctx.getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
+        String userKey = prefs.getString("user_key", "");
+        String basePath = prefs.getString("incidents_path", "");
+        if (userKey.isEmpty() || basePath.isEmpty()) return;
+
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        fmt.setTimeZone(TimeZone.getTimeZone("Europe/Moscow"));
+        String date = fmt.format(new Date(start));
+        try {
+            JSONObject rec = new JSONObject();
+            rec.put("userKey", userKey);
+            rec.put("name", prefs.getString("user_name", userKey));
+            rec.put("polygon", prefs.getString("polygon", ""));
+            rec.put("start", start);
+            rec.put("end", end);
+            rec.put("durationSec", Math.max(0, (end - start) / 1000));
+            rec.put("attempts", cycles);
+            // no_fix — телефон вообще не выдал координаты; out_of_zone — координаты были, но вне зоны
+            rec.put("kind", hadFix ? "out_of_zone" : "no_fix");
+            rec.put("resolved", resolved);
+            MainActivity.enqueueSyncItem(ctx, basePath + "/" + date + "/" + userKey + "_" + start, rec.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -256,6 +350,8 @@ public class GeoTrackingService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        // Вышел с линии посреди сбоя — сбой закрывается без возврата в зону
+        finishIncident(false);
         stopped = true;
         isRunning = false;
         restartInProgress = false;
