@@ -730,9 +730,11 @@
         if (isOnShift) { endShift(); } else { startShift(); }
     }
 
-    function startShift() {
+    function startShift(skipShiftQuestion) {
         if (isShiftBlocked()) { onBlockedShiftTap(); return; }
         if (!navigator.geolocation) { showToast("GPS недоступен на этом устройстве"); return; }
+        // Смены на сегодня нет — спрашиваем, на смене ли человек; «Да» записывает его во внеплановые
+        if (!skipShiftQuestion && !hasShiftToday()) { askOnShiftToday(); return; }
         syncTrackingUserToNative();
         isOnShift = true;
         updateShiftButtonsUI();
@@ -785,6 +787,73 @@
         shiftBlock = readCachedShiftBlock();
         applyShiftBlock(true);
     });
+
+    // ---------- «ВЫ СЕГОДНЯ НА СМЕНЕ?» при нажатии «Я на линии» без смены ----------
+    function hasShiftToday() {
+        let userKey = currentUser.firstName + '_' + currentUser.lastName;
+        let today = getTodayDateStr();
+        let inList = list => !!(list && list[today] && list[today].includes(userKey));
+        return inList(globalSchedule.approved) || inList(globalSchedule.unplanned);
+    }
+
+    function askOnShiftToday() {
+        let modal = document.getElementById('onShiftTodayModal');
+        if (!modal) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="onShiftTodayModal" class="modal-overlay" style="z-index:3000;">
+                    <div class="modal-content" style="max-width: 360px; text-align: center;">
+                        <div class="modal-title">Вы сегодня на смене?</div>
+                        <div style="font-size: 14px; color: #555; margin: 8px 0 18px;">На сегодня у вас нет смены в графике. Если вы вышли работать, мы добавим вас во внеплановые на сегодня.</div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-nav" style="flex: 1; padding: 12px;" onclick="answerOnShiftToday(false)">Нет</button>
+                            <button class="btn-nav" style="flex: 1; padding: 12px; background: var(--success); color: #fff;" onclick="answerOnShiftToday(true)">Да, я на смене</button>
+                        </div>
+                    </div>
+                </div>`);
+            modal = document.getElementById('onShiftTodayModal');
+        }
+        modal.style.display = 'flex';
+    }
+
+    function answerOnShiftToday(yes) {
+        document.getElementById('onShiftTodayModal').style.display = 'none';
+        if (!yes) { showToast('Хорошо, «Я на линии» не включён', 'blue'); return; }
+        addMeToUnplannedToday();
+        startShift(true);
+    }
+
+    function addMeToUnplannedToday() {
+        let userKey = currentUser.firstName + '_' + currentUser.lastName;
+        let today = getTodayDateStr();
+
+        // Сегодня — в мои заявки, иначе следующая «Отправить заявку» уберёт меня из графика на сегодня
+        if (!currentUser.selectedDates.includes(today)) {
+            currentUser.selectedDates.push(today);
+            db.ref('users_schedules/' + userKey).update({ selectedDates: currentUser.selectedDates })
+                .catch(e => console.log('selectedDates: ' + e.message));
+            renderCalendar();
+        }
+
+        db.ref(getPolyPath(currentUser.polygon, 'final_schedule')).transaction(current => {
+            let schedule = current || {};
+            if (!schedule.approved) schedule.approved = {};
+            if (!schedule.unplanned) schedule.unplanned = {};
+            let approved = schedule.approved[today] || [];
+            let unplanned = schedule.unplanned[today] || [];
+            // Записываем, даже если все места заняты
+            if (!approved.includes(userKey) && !unplanned.includes(userKey)) {
+                schedule.unplanned[today] = unplanned.concat(userKey);
+            }
+            return schedule;
+        }, (error, committed, snapshot) => {
+            if (error) { showToast('Не удалось записать во внеплановые: ' + error.message, 'red'); return; }
+            if (!committed) return;
+            globalSchedule = snapshot.val() || { approved: {}, unplanned: {} };
+            saveOfflineCache('offline_globalSchedule', globalSchedule);
+            renderWeeklySchedule();
+            showToast('Вы добавлены во внеплановые на сегодня', 'green');
+        });
+    }
 
     // Передаёт службе геотрекинга, кто на смене и куда писать сбои геолокации
     function syncTrackingUserToNative() {
@@ -1566,6 +1635,7 @@
         } else if (lastSeenVersion < APP_VERSION) {
             let cl = document.getElementById('changelogContent');
             cl.innerHTML = `<ul>
+                <li><b>🟢 «Я на линии» без смены:</b> Если на сегодня у вас нет смены, приложение спросит «Вы сегодня на смене?» — при ответе «Да» вы автоматически попадёте во внеплановые на сегодня.</li>
                 <li><b>📍 Геолокация:</b> Если телефон показывает, что вы вне зоны, приложение перезапускает геолокацию и перепроверяет каждые 10 секунд, пока вы не вернётесь в зону. Делать ничего не нужно.</li>
                 <li><b>🛑 Выход с линии:</b> Исправлено — после «Я НА ЛИНИИ» → выкл. отслеживание и уведомления о зоне полностью останавливаются.</li>
                 <li><b>🔔 Напоминания об отчёте:</b> Теперь приходят только в те дни, когда у вас стоит смена.</li>
