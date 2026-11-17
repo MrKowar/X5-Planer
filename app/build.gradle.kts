@@ -17,8 +17,8 @@ android {
         applicationId = "com.example.x5planer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "16.0"
+        versionCode = 17
+        versionName = "17.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

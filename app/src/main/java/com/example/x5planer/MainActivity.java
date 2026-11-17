@@ -165,11 +165,24 @@ public class MainActivity extends AppCompatActivity {
     private boolean updateInProgress = false;
     private boolean waitingInstallPermission = false;
     private AlertDialog updateDialog = null;
+    private DatabaseReference updateListenerRef = null;
+    private ValueEventListener updateListener = null;
+
+    // Экран пересоздаётся (поворот, смена темы) — снимаем слушатель старого экрана,
+    // иначе окно обновления открывается дважды, одно поверх другого
+    @Override
+    protected void onDestroy() {
+        if (updateListenerRef != null && updateListener != null) {
+            updateListenerRef.removeEventListener(updateListener);
+        }
+        super.onDestroy();
+    }
 
     private void checkForUpdates() {
         DatabaseReference updateRef = FirebaseDatabase.getInstance().getReference("update");
+        updateListenerRef = updateRef;
         // Слушаем постоянно: если обновление выложено, пока приложение открыто, окно появится сразу
-        updateRef.addValueEventListener(new ValueEventListener() {
+        updateListener = updateRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
@@ -203,6 +216,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Скачанный и проверенный APK — при повторной попытке открываем установщик сразу, без новой загрузки
+    private File readyApkFile = null;
+    private String readyApkSha256 = null;
+    // Установщик открыт — по возвращении проверяем, обновилось ли приложение
+    private boolean installerLaunched = false;
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -212,10 +231,33 @@ public class MainActivity extends AppCompatActivity {
             downloadAndInstallApk(pendingApkUrl, pendingApkSha256);
             return;
         }
-        // Пользователь закрыл установщик, не обновившись — обязательное обновление спрашиваем снова
+        // Вернулись из установщика, а приложение не обновилось (нажали «Отмена» или
+        // «Не устанавливать» в Google Play Protect) — объясняем, что делать, вместо того
+        // чтобы по кругу показывать то же окно и заново скачивать файл
+        if (installerLaunched) {
+            installerLaunched = false;
+            if (pendingApkUrl != null && !updateInProgress) showInstallHelpDialog();
+            return;
+        }
+        // Обязательное обновление, которое ещё не начинали, — спрашиваем снова
         if (pendingApkUrl != null && pendingUpdateForced && !updateInProgress) {
             showUpdateDialog(pendingApkUrl, pendingApkSha256);
         }
+    }
+
+    private void showInstallHelpDialog() {
+        if (isFinishing()) return;
+        if (updateDialog != null && updateDialog.isShowing()) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("Обновление не установлено")
+                .setMessage("Установка была отменена.\n\n"
+                        + "Нажмите «Установить снова». Если появится окно Google Play Protect — "
+                        + "нажмите «Сканировать приложение» (Scan app), а затем «Установить» (Install). "
+                        + "Не нажимайте «Не устанавливать».")
+                .setCancelable(false)
+                .setPositiveButton("Установить снова", (d, w) -> downloadAndInstallApk(pendingApkUrl, pendingApkSha256));
+        if (!pendingUpdateForced) builder.setNegativeButton("Позже", (d, w) -> d.dismiss());
+        updateDialog = builder.show();
     }
 
     private int getCurrentVersionCode() {
@@ -236,8 +278,10 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (isFinishing()) return;
+                if (isFinishing() || isDestroyed()) return;
+                // Одно окно за раз: не показываем второе поверх первого, загрузки или установщика
                 if (updateDialog != null && updateDialog.isShowing()) return;
+                if (updateInProgress || installerLaunched) return;
 
                 String text = (pendingUpdateMessage != null && !pendingUpdateMessage.trim().isEmpty())
                         ? pendingUpdateMessage
@@ -274,6 +318,13 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(intent);
                     })
                     .show();
+            return;
+        }
+
+        // Этот же файл уже скачан и проверен — не качаем заново
+        if (readyApkFile != null && readyApkFile.exists() && expectedSha256 != null
+                && expectedSha256.equalsIgnoreCase(readyApkSha256)) {
+            launchInstaller(readyApkFile);
             return;
         }
 
@@ -439,7 +490,12 @@ public class MainActivity extends AppCompatActivity {
 
         updateInProgress = false;
         dismissDownloadProgress();
+        readyApkFile = file;
+        readyApkSha256 = expectedSha256;
+        launchInstaller(file);
+    }
 
+    private void launchInstaller(File file) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Uri apkUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
@@ -447,8 +503,10 @@ public class MainActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
         try {
+            installerLaunched = true;
             startActivity(intent);
         } catch (Exception e) {
+            installerLaunched = false;
             e.printStackTrace();
             onUpdateFailed("Не удалось запустить установку обновления");
         }
