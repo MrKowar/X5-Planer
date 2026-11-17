@@ -1147,7 +1147,7 @@
     let rainyDays = [];
     let profitableDays = {};
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-    const APP_VERSION = 17
+    const APP_VERSION = 18
     ; // Обновлена версия для вызова модалки
         function saveOfflineCache(key, data) {
         try {
@@ -2912,13 +2912,26 @@ function submitReport(isNoComment) {
                 }
             }
 
+            // Штраф (блокировка «Я на линии») — только главному админу
+            let penaltyBtn = '', penaltyBadge = '';
+            if (currentUser.role === 'superadmin' && emp.role !== 'superadmin') {
+                let block = (allShiftBlocks[emp.polygon || currentUser.polygon] || {})[key];
+                let active = block && Date.now() < block.until;
+                penaltyBtn = `<button class="btn-nav" style="background:#fdecea; color:#b71c1c; border:1px solid #f5c2c7;" onclick="openShiftBlockDialog(${escapeHtml(JSON.stringify(key))})">🔒 Штраф</button>`;
+                if (block) {
+                    penaltyBadge = `<span style="font-size:12px; color:#b71c1c; font-weight:bold; margin-top: 4px;">${active ? '🔒 «Я на линии» заблокирована до ' + formatBlockTime(block.until) : '⏰ Штраф закончился, ждёт ключ'}</span>`;
+                }
+            }
+
             html += `<div style="padding: 16px; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start; background: #f8f9fa; border: 1px solid #ced4da; border-radius: 8px;">
                         <div style="width: 100%; display: flex; justify-content: space-between;">
                             <b style="font-size: 16px;">${escapeHtml(emp.firstName)} ${escapeHtml(emp.lastName)}</b>                            <span>${emp.role === 'admin' ? '⭐ (Админ)' : ''}</span>
                         </div>
                         <span style="font-size:12px; color:${verColor}; font-weight:bold; margin-top: 4px;">📱 Версия: ${ver}</span>
-                        <div style="margin-top: 12px; width: 100%; display: flex; gap: 8px;">
+                        ${penaltyBadge}
+                        <div style="margin-top: 12px; width: 100%; display: flex; gap: 8px; flex-wrap: wrap;">
                             ${roleBtn}
+                            ${penaltyBtn}
                             <button class="btn-danger btn-nav" style="flex: 1;" onclick="if(confirm('Точно удалить?')) db.ref('users_schedules/${key}').remove()">Удалить</button>
                         </div>
                      </div>`;
@@ -2981,6 +2994,7 @@ function submitReport(isNoComment) {
             attachListener(getPolyPath(p, 'shift_blocks'), 'value', snap => {
                 allShiftBlocks[p] = snap.val() || {};
                 renderActiveShiftBlocks();
+                if (isAdmin) loadEmployees();
             });
         });
     }
@@ -3042,6 +3056,83 @@ function submitReport(isNoComment) {
     function removeShiftBlock(poly, userKey) {
         if (!confirm('Снять блокировку?')) return;
         db.ref(getPolyPath(poly, `shift_blocks/${userKey}`)).remove();
+    }
+
+    // Окно «Штраф» из карточки сотрудника (вкладка «Сотрудники»)
+    function openShiftBlockDialog(userKey) {
+        let u = globalUsersData[userKey] || {};
+        let name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || userKey;
+        let poly = u.polygon || currentUser.polygon;
+        let block = (allShiftBlocks[poly] || {})[userKey];
+        let modal = document.getElementById('shiftBlockModal');
+        if (!modal) {
+            document.body.insertAdjacentHTML('beforeend', '<div id="shiftBlockModal" class="modal-overlay" style="z-index:3000;"><div class="modal-content" id="shiftBlockModalContent" style="max-width: 380px; max-height: 90vh; overflow-y: auto;"></div></div>');
+            modal = document.getElementById('shiftBlockModal');
+        }
+        let current = block
+            ? `<div style="padding:10px; border-radius:8px; background:#fff5f5; border:1px solid #f5c2c7; font-size:13px; margin-bottom:12px;">
+                   ${Date.now() < block.until ? '🔒 Сейчас заблокирована' : '⏰ Штраф закончился, ждёт ключ'}: ${formatBlockTime(block.from)} – ${formatBlockTime(block.until)}
+                   ${block.reason ? `<div style="color:#666; margin-top:2px;">${escapeHtml(block.reason)}</div>` : ''}
+                   <button class="btn-nav" style="margin-top:8px;" onclick="removeShiftBlock(${escapeHtml(JSON.stringify(poly))}, ${escapeHtml(JSON.stringify(userKey))}); closeShiftBlockDialog();">Снять блокировку</button>
+               </div>`
+            : '';
+        document.getElementById('shiftBlockModalContent').innerHTML = `
+            <div class="modal-title">🔒 Штраф: ${escapeHtml(name)}</div>
+            <div style="font-size:13px; color:#666; margin:6px 0 14px;">На это время кнопка «Я на линии» у сотрудника не будет работать.</div>
+            ${current}
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <label style="font-size:13px;">Штрафных часов
+                    <input type="number" id="dlgBlockHours" min="0.25" step="0.25" value="1" oninput="updateDialogBlockPreview()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ced4da; box-sizing:border-box;"></label>
+                <label style="font-size:13px;">или заблокировать до
+                    <input type="datetime-local" id="dlgBlockUntil" oninput="updateDialogBlockPreview()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ced4da; box-sizing:border-box;"></label>
+                <input type="text" id="dlgBlockReason" maxlength="120" placeholder="Причина (её увидит сотрудник)" style="padding:10px; border-radius:8px; border:1px solid #ced4da;">
+                <div id="dlgBlockPreview" style="font-size:13px; color:#b71c1c;"></div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-nav" style="flex:1; padding:12px;" onclick="closeShiftBlockDialog()">Отмена</button>
+                    <button class="btn-danger" style="flex:1; padding:12px; border-radius:8px;" onclick="submitShiftBlockDialog(${escapeHtml(JSON.stringify(userKey))})">Заблокировать</button>
+                </div>
+            </div>`;
+        modal.style.display = 'flex';
+        updateDialogBlockPreview();
+    }
+
+    function closeShiftBlockDialog() {
+        let modal = document.getElementById('shiftBlockModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function getDialogBlockUntil() {
+        let exact = document.getElementById('dlgBlockUntil').value;
+        if (exact) return new Date(exact).getTime();
+        let hours = parseFloat(document.getElementById('dlgBlockHours').value);
+        return hours > 0 ? Date.now() + hours * 3600000 : 0;
+    }
+
+    function updateDialogBlockPreview() {
+        let el = document.getElementById('dlgBlockPreview');
+        if (!el) return;
+        let until = getDialogBlockUntil();
+        el.textContent = until > Date.now() ? `Будет заблокировано с ${formatBlockTime(Date.now())} до ${formatBlockTime(until)}` : '';
+    }
+
+    function submitShiftBlockDialog(userKey) {
+        let until = getDialogBlockUntil();
+        if (!(until > Date.now())) { showToast('Укажите штрафные часы или время окончания в будущем', 'red'); return; }
+        let u = globalUsersData[userKey] || {};
+        let poly = u.polygon || currentUser.polygon;
+        let block = {
+            from: Date.now(),
+            until: until,
+            reason: document.getElementById('dlgBlockReason').value.trim(),
+            name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || userKey,
+            by: `${currentUser.firstName} ${currentUser.lastName}`
+        };
+        db.ref(getPolyPath(poly, `shift_blocks/${userKey}`)).set(block)
+            .then(() => {
+                showToast(`${block.name}: кнопка заблокирована до ${formatBlockTime(until)}`, 'green');
+                closeShiftBlockDialog();
+            })
+            .catch(e => showToast('Не удалось заблокировать: ' + e.message, 'red'));
     }
 
     function renderActiveShiftBlocks() {
