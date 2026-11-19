@@ -2,7 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#f5f7fa">
+    <meta name="color-scheme" content="light">
     <title>График Смен</title>
 
     <!-- Ссылка на иконки Google -->
@@ -23,8 +25,30 @@
             --gray-border: #eaeaea;
         }
 
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); padding: 16px; }
-        .screen { display: none; flex-direction: column; min-height: 90vh; }
+        /* === Ощущение нативного приложения на телефоне === */
+        html {
+            -webkit-tap-highlight-color: transparent; /* без серой/синей вспышки при нажатии */
+            -webkit-text-size-adjust: 100%;           /* без увеличения шрифта в альбомной ориентации */
+            overscroll-behavior: none;                /* страница не «тянется» за край */
+        }
+        input, textarea, select { font-size: 16px; } /* меньше 16px — телефон приближает страницу при вводе */
+        button, a, [role="button"], .tab, .day, .toggle-btn, .calendar-nav, .mode-selector label, .sp-thread, .sp-filter {
+            touch-action: manipulation;   /* нажатие срабатывает сразу, без задержки двойного тапа */
+            user-select: none;
+            -webkit-user-select: none;    /* долгое нажатие не выделяет текст кнопки */
+            -webkit-touch-callout: none;
+        }
+        .tab, .day, .toggle-btn, .mode-selector label, .calendar-nav { transition: transform 120ms ease-out, background-color 160ms ease-out, color 160ms ease-out, box-shadow 160ms ease-out; }
+        .tab:active, .toggle-btn:active, .mode-selector label:active { transform: scale(0.96); }
+        .tabs, .sp-body, .sp-filters, .modal-content, .vacation-list { overscroll-behavior: contain; }
+        .tabs { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab { scroll-snap-align: start; }
+        .modal-overlay { overscroll-behavior: contain; padding-top: max(16px, env(safe-area-inset-top, 0px)); padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
+
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); padding: 16px;
+               padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+        .screen { display: none; flex-direction: column; min-height: 90vh; min-height: 90dvh; }
         .screen.active { display: flex; }
         input[type="text"], input[type="number"], input[type="date"] { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
@@ -48,7 +72,7 @@
         .btn-support.has-unread .unread-dot { display: block; }
 
         /* === ПОДДЕРЖКА (ЧАТ) === */
-        .sp-sheet { background: #fff; width: 100%; max-width: 440px; height: min(640px, 88vh); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
+        .sp-sheet { background: #fff; width: 100%; max-width: 440px; height: min(640px, 88vh); height: min(640px, 88dvh); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
         .sp-head { display: flex; align-items: center; gap: 12px; padding: 16px; background: linear-gradient(135deg, #1e88e5, #6a1b9a); color: #fff; }
         .sp-avatar { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0; position: relative; }
         .sp-avatar.online::after { content: ""; position: absolute; right: 1px; bottom: 1px; width: 11px; height: 11px; border-radius: 50%; background: #4ade80; border: 2px solid #fff; }
@@ -94,7 +118,7 @@
         .sp-thread-poly { font-size: 11px; color: #64748b; margin: 2px 0 4px; }
         .sp-thread-last { font-size: 13px; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .sp-thread.unread .sp-thread-last { font-weight: 700; color: #1f2937; }
-        .sp-admin-chat { border: 1px solid #eef2f6; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; height: 70vh; }
+        .sp-admin-chat { border: 1px solid #eef2f6; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; height: 70vh; height: 70dvh; }
         .sp-admin-chat .sp-head { background: #fff; color: #1f2937; border-bottom: 1px solid #eef2f6; }
         .sp-admin-chat .sp-avatar { background: #e3f2fd; color: var(--primary); }
         .sp-admin-chat .sp-close { background: #eef2f6; color: #475569; }
@@ -234,63 +258,136 @@
 }
 
 /* === Блокировка «Я на линии»: цепь, замок, ключ === */
+/* Цепь — из отдельных звеньев (кольцо / ребро), обвивает кнопку крест-накрест и уходит за края.
+   Анимируются только transform и opacity. Блокировка — редкое событие, поэтому здесь можно чуть больше «характера». */
 .shift-lock-wrap { position: relative; width: fit-content; margin: 0 auto; }
-.shift-lock-wrap.locked .btn-neon { opacity: .45; filter: grayscale(1); }
-.shift-lock-layer { display: none; position: absolute; left: 50%; top: 50%; width: 320px; max-width: calc(100vw - 32px); height: 100px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
+.shift-lock-wrap .btn-neon { transition: opacity 300ms ease-out, filter 300ms ease-out; }
+.shift-lock-wrap.locked .btn-neon { opacity: .4; filter: grayscale(1); }
+.shift-lock-layer { --lock-ease: cubic-bezier(0.23, 1, 0.32, 1); --lock-inout: cubic-bezier(0.77, 0, 0.175, 1);
+    display: none; position: absolute; left: 50%; top: 50%; width: min(320px, calc(100vw - 80px)); aspect-ratio: 320 / 110; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
+#mainScreen { overflow-x: clip; } /* петли цепи за краями кнопки не должны давать горизонтальную прокрутку */
 .shift-lock-wrap.locked .shift-lock-layer { display: block; }
 .lock-chain { width: 100%; height: 100%; overflow: visible; }
-.chain-reveal { fill: none; stroke: #fff; stroke-width: 18; stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 0; }
-.chain-links { fill: none; stroke: #6b7580; stroke-width: 7; stroke-linecap: round; stroke-dasharray: 11 6; }
-.chain-shine { fill: none; stroke: #d5dbe1; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 11 6; }
-.lock-pad { position: absolute; left: 50%; top: 50%; width: 46px; height: 54px; margin: -30px 0 0 -23px; overflow: visible; filter: drop-shadow(0 3px 4px rgba(0,0,0,.3)); }
-.lock-shackle { fill: none; stroke: #7a8590; stroke-width: 5; stroke-linecap: round; }
-.lock-body { fill: #f2b705; stroke: #a87c00; stroke-width: 2; }
-.lock-hole { fill: #5c4300; }
+.chain-back { opacity: .55; }
+.lk { transform-box: fill-box; transform-origin: center; }
+.lk-ring { fill: none; stroke: url(#lkSteel); stroke-width: 2.4; }
+.lk-ring-hi { fill: none; stroke: #fff; stroke-opacity: .7; stroke-width: .9; stroke-dasharray: 5 40; stroke-linecap: round; }
+.lk-edge { fill: url(#lkSteelEdge); stroke: #3f4a56; stroke-width: .5; }
+
+.lock-pad { position: absolute; left: 50%; top: 50%; width: 52px; height: 62px; margin: -34px 0 0 -26px; overflow: visible; filter: drop-shadow(0 4px 5px rgba(0,0,0,.35)); }
+.lock-shackle-g, .lock-body-g, .lock-key-in { transform-box: fill-box; }
+.lock-shackle-g { transform-origin: 100% 100%; }
+.lock-body-g { transform-origin: 50% 100%; }
+.lock-key-in { transform-origin: 0% 50%; opacity: 0; }
+.lock-glint { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.lock-halo { opacity: 0; transition: opacity 150ms ease-out; }
+.lock-pad.key-near .lock-halo { opacity: 1; }
+
 .shift-lock-info { display: none; text-align: center; font-size: 13px; color: #b71c1c; margin: 12px 16px 10px; line-height: 1.4; }
-.shift-lock-wrap.locked .shift-lock-info { display: block; }
+.shift-lock-stage { position: relative; transition: margin 300ms cubic-bezier(0.23, 1, 0.32, 1); }
+.shift-lock-wrap.locked .shift-lock-stage { margin: 24px 0 4px; } /* место для петель цепи сверху */
+.shift-lock-wrap.locked .shift-lock-info { display: block; margin-top: 30px; }
 .shift-lock-reason { color: #666; font-size: 12px; margin-top: 2px; }
 
-/* Закрытие: цепи «наползают» змейкой, замок падает и защёлкивается */
-.shift-lock-layer.closing .chain-reveal { animation: chainDraw .9s cubic-bezier(.45,0,.2,1) both; }
-.shift-lock-layer.closing .chain-reveal-b { animation-delay: .2s; }
-.shift-lock-layer.closing .lock-pad { animation: lockDrop .45s cubic-bezier(.3,1.4,.5,1) .85s both; }
-.shift-lock-layer.closing .lock-shackle { animation: shackleSnap .25s ease-in 1.2s both; }
-.shift-lock-layer.closing .lock-body { animation: lockThud .3s ease-out 1.42s; }
-@keyframes chainDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes lockDrop { from { transform: translateY(-46px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Закрытие: звенья стягиваются от краёв к центру → замок падает на перекрестье → дужка щёлкает → блик по корпусу */
+.shift-lock-layer.closing .lk { animation: linkIn 220ms var(--lock-ease) both; animation-delay: var(--d); }
+.shift-lock-layer.closing .lock-pad { animation: lockDrop 340ms var(--lock-ease) 420ms both; }
+.shift-lock-layer.closing .lock-shackle-g { animation: shackleSnap 140ms var(--lock-ease) 780ms both; }
+.shift-lock-layer.closing .lock-body-g { animation: lockThud 180ms ease-out 900ms; }
+.shift-lock-layer.closing .lock-glint { animation: lockGlint 560ms var(--lock-inout) 1000ms both; }
+@keyframes linkIn { from { opacity: 0; transform: translateY(-6px) scale(.6); } }
+@keyframes lockDrop { 0% { opacity: 0; transform: translateY(-28px) scale(.9) rotate(-8deg); } 70% { opacity: 1; transform: translateY(2px) rotate(2deg); } 100% { opacity: 1; transform: none; } }
 @keyframes shackleSnap { from { transform: translateY(-7px); } to { transform: none; } }
-@keyframes lockThud { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px) scaleY(.96); } }
+@keyframes lockThud { 50% { transform: translateY(1px) scaleY(.96); } }
+@keyframes lockGlint { 0% { opacity: 0; transform: translateX(-40px) skewX(-20deg); } 30% { opacity: .9; } 100% { opacity: 0; transform: translateX(40px) skewX(-20deg); } }
 
-/* Открытие: дужка выскакивает, замок падает, цепи сползают */
-.shift-lock-layer.opening .lock-shackle { transform-box: fill-box; transform-origin: 100% 100%; animation: shackleOpen .35s ease-out both; }
-.shift-lock-layer.opening .lock-pad { animation: lockFall .6s ease-in .4s both; }
-.shift-lock-layer.opening .chain-reveal { animation: chainUndraw .7s ease-in .55s both; }
-@keyframes shackleOpen { to { transform: translateY(-8px) rotate(-28deg); } }
-@keyframes lockFall { to { transform: translateY(60px) rotate(18deg); opacity: 0; } }
-@keyframes chainUndraw { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -1; } }
+/* Открытие ключом: ключ входит и проворачивается → дужка выскакивает → замок падает → звенья осыпаются от центра к краям */
+.shift-lock-layer.opening .lock-key-in { animation: keyInsert 160ms var(--lock-ease) both, keyTurn 220ms var(--lock-inout) 170ms both; }
+.shift-lock-layer.opening .lock-shackle-g { animation: shackleOpen 220ms var(--lock-ease) 400ms both; }
+.shift-lock-layer.opening .lock-pad { animation: lockFall 380ms var(--lock-inout) 640ms both; }
+.shift-lock-layer.opening .lk { animation: linkOut 240ms var(--lock-inout) both; animation-delay: calc(640ms + var(--o)); }
+@keyframes keyInsert { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+@keyframes keyTurn { from { opacity: 1; } to { opacity: 1; transform: scaleY(.2); } }
+@keyframes shackleOpen { to { transform: translateY(-9px) rotate(-30deg); } }
+@keyframes lockFall { to { opacity: 0; transform: translateY(46px) rotate(16deg); } }
+@keyframes linkOut { to { opacity: 0; transform: translateY(16px) rotate(24deg) scale(.8); } }
 
-.shift-lock-layer .lock-pad.shake { animation: lockShake .4s ease-in-out; }
+/* Нажали на заблокированную кнопку — замок дёргается */
+.shift-lock-layer .lock-pad.shake { animation: lockShake 400ms var(--lock-inout); }
 @keyframes lockShake { 20%, 60% { transform: rotate(-12deg); } 40%, 80% { transform: rotate(12deg); } }
 
-.shift-lock-key { position: fixed; right: 12px; top: 45%; width: 72px; height: 36px; padding: 4px; z-index: 2500; display: none; touch-action: none; cursor: grab; border-radius: 18px; background: rgba(255,248,225,.95); box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-.shift-lock-key.visible { display: block; animation: keyIn .5s cubic-bezier(.3,1.4,.5,1) both, keyWiggle 2.4s ease-in-out .8s infinite; }
-.shift-lock-key.dragging { animation: none; cursor: grabbing; transition: none; }
-.shift-lock-key:not(.dragging) { transition: transform .3s cubic-bezier(.3,1.4,.5,1); }
-.shift-lock-key svg { width: 100%; height: 100%; fill: #e0a800; }
-.shift-lock-key .key-hole { fill: #fff8e1; }
-@keyframes keyIn { from { transform: translateX(90px); } to { transform: none; } }
+.shift-lock-key { position: fixed; right: 12px; top: 45%; width: 84px; height: 40px; padding: 4px 6px; z-index: 2500; display: none; touch-action: none; cursor: grab; border-radius: 20px; background: rgba(255,248,225,.96); box-shadow: 0 4px 14px rgba(0,0,0,.25); box-sizing: border-box; }
+.shift-lock-key.visible { display: block; animation: keyIn 420ms cubic-bezier(0.23, 1, 0.32, 1) both, keyWiggle 2.4s ease-in-out 800ms infinite; }
+.shift-lock-key.dragging { animation: none; cursor: grabbing; transition: none; box-shadow: 0 10px 24px rgba(0,0,0,.3); }
+.shift-lock-key:not(.dragging) { transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1); }
+.shift-lock-key svg { width: 100%; height: 100%; overflow: visible; }
+@keyframes keyIn { from { opacity: 0; transform: translateX(90px); } to { opacity: 1; transform: none; } }
 @keyframes keyWiggle { 0%, 70%, 100% { rotate: 0deg; } 80% { rotate: -12deg; } 90% { rotate: 8deg; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .shift-lock-layer.closing *, .shift-lock-layer.opening *, .shift-lock-key.visible { animation-duration: .01s !important; animation-delay: 0s !important; }
+  /* Без движения — только плавное появление и исчезновение */
+  .shift-lock-layer.closing .lk, .shift-lock-layer.closing .lock-pad { animation: lockFadeIn 200ms ease both; }
+  .shift-lock-layer.closing .lock-shackle-g, .shift-lock-layer.closing .lock-body-g, .shift-lock-layer.closing .lock-glint,
+  .shift-lock-layer.opening .lock-shackle-g, .shift-lock-layer.opening .lock-key-in { animation: none; }
+  .shift-lock-layer.opening .lk, .shift-lock-layer.opening .lock-pad { animation: lockFadeOut 200ms ease 150ms both; }
+  .shift-lock-layer .lock-pad.shake { animation: none; }
+  .shift-lock-key.visible { animation: lockFadeIn 200ms ease both; }
 }
+@keyframes lockFadeIn { from { opacity: 0; } }
+@keyframes lockFadeOut { to { opacity: 0; } }
+        /* === ОТЧЁТЫ О СБОЯХ ГЕОЛОКАЦИИ === */
+        .geo-datebar { display: flex; align-items: center; gap: 8px; }
+        .geo-datebar input[type="date"] { flex: 1; margin: 0; background: #f8f9fa; border: 1px solid #ced4da; padding: 10px 12px; text-align: center; }
+        .geo-datebtn { width: 44px; height: 44px; flex-shrink: 0; margin: 0; padding: 0; border-radius: 12px; background: #eef2f6; color: #475569; font-size: 24px; line-height: 44px; transition: transform 120ms ease-out; }
+        .geo-datebtn:active { transform: scale(0.92); }
+        .geo-toplabel { flex: 1; text-align: center; font-weight: 700; color: #334155; font-size: 15px; }
+        .geo-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .geo-stat { background: #fff7ed; border: 1px solid #fde4cf; border-radius: 12px; padding: 10px 6px; text-align: center; }
+        .geo-stat b { display: block; font-size: 18px; color: #9a3412; font-variant-numeric: tabular-nums; }
+        .geo-stat span { font-size: 11px; color: #9a3412; opacity: .75; }
+        .geo-user { border: 1px solid #f5d0d0; background: #fffafa; border-radius: 12px; overflow: hidden; }
+        .geo-user > summary { list-style: none; cursor: pointer; padding: 12px 14px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+        .geo-user > summary::-webkit-details-marker { display: none; }
+        .geo-user > summary:active { background: #fff1f1; }
+        .geo-user-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+        .geo-user-head b::before { content: '›'; display: inline-block; margin-right: 6px; color: #b91c1c; transition: transform 200ms ease-out; }
+        .geo-user[open] .geo-user-head b::before { transform: rotate(90deg); }
+        .geo-user-meta { font-size: 12px; color: #b91c1c; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .geo-user .geo-rows { padding: 0 14px; }
+        .geo-user .geo-legend { padding: 0 14px 12px; }
+        .geo-timeline { position: relative; height: 10px; margin-top: 10px; border-radius: 5px; background: #e8f5e9; overflow: hidden; }
+        .geo-timeline i { position: absolute; top: 0; bottom: 0; background: #ef4444; border-radius: 3px; }
+        .geo-timeline i.nofix { background: #f59e0b; }
+        .geo-timeline-axis { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 3px; font-variant-numeric: tabular-nums; }
+        .geo-rows { display: grid; gap: 4px; margin-top: 10px; }
+        .geo-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 8px; background: #fff; border: 1px solid #f1f5f9; font-size: 14px; }
+        .geo-row-time { font-weight: 700; color: #1f2937; font-variant-numeric: tabular-nums; }
+        .geo-row-kind { font-size: 12px; color: #64748b; }
+        .geo-row-dur { font-size: 12px; color: #b91c1c; font-weight: 700; min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+        .geo-legend { font-size: 11px; color: #94a3b8; margin-top: 6px; }
+        .geo-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #eef2f6; border-radius: 12px; margin-bottom: 12px; }
+        .geo-seg-btn { margin: 0; padding: 10px; border-radius: 9px; background: transparent; color: #64748b; font-size: 14px; transition: background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out; }
+        .geo-seg-btn.active { background: #fff; color: #1f2937; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+        .geo-top { display: grid; gap: 6px; }
+        .geo-top-row { position: relative; display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 12px; background: #f8fafc; overflow: hidden; isolation: isolate;
+                       animation: geoTopIn 320ms cubic-bezier(.23,1,.32,1) both; animation-delay: calc(min(var(--i), 8) * 40ms); }
+        .geo-top-row::before { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--w); background: rgba(239, 68, 68, .10); z-index: -1; border-radius: 12px; }
+        .geo-top-row.podium { background: #fffbeb; }
+        .geo-top-row.podium::before { background: rgba(245, 158, 11, .18); }
+        .geo-top-row.me { outline: 2px solid var(--primary); }
+        .geo-top-place { font-size: 18px; text-align: center; font-weight: 800; color: #64748b; }
+        .geo-top-name { font-weight: 700; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .geo-top-val { font-size: 13px; color: #b91c1c; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        @keyframes geoTopIn { from { opacity: 0; transform: translateY(6px); } }
+        @media (prefers-reduced-motion: reduce) { .geo-top-row { animation: none; } }
+
         /* === АНИМИРОВАННОЕ УВЕДОМЛЕНИЕ (ТОСТ) === */
 
         /* === НОВЫЕ УВЕДОМЛЕНИЯ СВЕРХУ СПРАВА === */
         .toast-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: calc(20px + env(safe-area-inset-top, 0px));
+            right: calc(20px + env(safe-area-inset-right, 0px));
             z-index: 9999;
             display: flex;
             flex-direction: column;
@@ -473,6 +570,8 @@
         <button id="tabReports" class="tab inactive" onclick="switchTab('reports')" style="display:none;">Отчеты</button>
         <button id="tabAnalytics" class="tab inactive" onclick="switchTab('analytics')" style="display:none;">Аналитика 🤖</button>
         <button id="tabAiAdmin" class="tab inactive" onclick="switchTab('aiAdmin')" style="display:none;">ИИ-Админ 🤖</button>
+        <button id="tabMyGeo" class="tab inactive" onclick="switchTab('myGeo')" style="display:none;">Мои сбои 📍</button>
+        <button id="tabGeoTop" class="tab inactive" onclick="switchTab('geoTop')" style="display:none;">Топ сбоев 🏆</button>
     </div>
 
     <div id="personalTab">
@@ -569,10 +668,46 @@
         </div>
         <div class="card" style="display:flex; flex-direction:column; background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px; margin-top: 16px;">
             <h3 style="margin-top:0; border-bottom: 2px solid var(--danger); padding-bottom: 12px; color: #222;">📍 Сбои геолокации</h3>
-            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Записываются автоматически у курьеров на линии: с какого по какое время телефон был вне зоны или не выдавал координаты.</div>
-            <input type="date" id="geoIncidentsDate" onchange="loadGeoIncidents()" style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 8px;">
+            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Записываются автоматически у курьеров на линии. Сбои, идущие подряд, собраны в один отрезок; нажмите на сотрудника, чтобы увидеть время.</div>
+            <div class="geo-datebar">
+                <button class="geo-datebtn" onclick="shiftGeoDate('geoIncidentsDate', -1, loadGeoIncidents)" aria-label="Предыдущий день">‹</button>
+                <input type="date" id="geoIncidentsDate" onchange="loadGeoIncidents()">
+                <button class="geo-datebtn" onclick="shiftGeoDate('geoIncidentsDate', 1, loadGeoIncidents)" aria-label="Следующий день">›</button>
+            </div>
             <div id="geoIncidentsSummary" style="margin-top: 14px;"></div>
             <div id="geoIncidentsList" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+    </div>
+
+    <div id="myGeoTab" style="display: none;">
+        <div class="card">
+            <h3 style="margin-top:0; border-bottom: 2px solid var(--danger); padding-bottom: 12px; color: #222;">📍 Мои сбои геолокации</h3>
+            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Когда телефон был вне зоны или не выдавал координаты, пока вы были «на линии». Видите только вы и администраторы.</div>
+            <div class="geo-datebar">
+                <button class="geo-datebtn" onclick="shiftGeoDate('myGeoDate', -1, loadMyGeoIncidents)" aria-label="Предыдущий день">‹</button>
+                <input type="date" id="myGeoDate" onchange="loadMyGeoIncidents()">
+                <button class="geo-datebtn" onclick="shiftGeoDate('myGeoDate', 1, loadMyGeoIncidents)" aria-label="Следующий день">›</button>
+            </div>
+            <div id="myGeoContent" style="margin-top: 14px;"></div>
+        </div>
+        <div class="card" id="myGeoTopCard" style="display:none;"></div>
+    </div>
+
+    <div id="geoTopTab" style="display: none;">
+        <div class="card">
+            <h3 style="margin-top:0; border-bottom: 2px solid #f59e0b; padding-bottom: 12px; color: #222;">🏆 Топ сбоев геолокации</h3>
+            <div class="geo-seg" role="tablist">
+                <button id="geoTopDayBtn" class="geo-seg-btn active" onclick="setGeoTopPeriod('day')">За день</button>
+                <button id="geoTopWeekBtn" class="geo-seg-btn" onclick="setGeoTopPeriod('week')">За неделю</button>
+            </div>
+            <div class="geo-datebar">
+                <button class="geo-datebtn" onclick="shiftGeoTop(-1)" aria-label="Назад">‹</button>
+                <div id="geoTopLabel" class="geo-toplabel"></div>
+                <button class="geo-datebtn" onclick="shiftGeoTop(1)" aria-label="Вперёд">›</button>
+            </div>
+            <div id="geoTopContent" style="margin-top: 14px;"></div>
+            <button id="geoTopPublishBtn" onclick="publishGeoTop()" style="background: linear-gradient(135deg, #f59e0b, #ef4444); border-radius: 12px; display:none;">📣 Опубликовать топ для всех</button>
+            <div id="geoTopPublished" style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;"></div>
         </div>
     </div>
 
@@ -730,8 +865,37 @@
         if (isOnShift) { endShift(); } else { startShift(); }
     }
 
+    // ---------- КОНЕЦ РАБОЧЕГО ДНЯ 20:10 (по Москве) ----------
+    // После 20:10 «Я на линии» выключается сама и не включается до полуночи, сбои после 20:10 не считаются
+    const DAY_END_MINUTE = 20 * 60 + 10;
+    function moscowMinuteOfDay(ts) {
+        let m = new Date(ts + 3 * 3600000);
+        return m.getUTCHours() * 60 + m.getUTCMinutes();
+    }
+    // Админов и главного админа правило 20:10 не касается — у них «Я на линии» работает всегда
+    function isAfterDayEnd() { return !isAdmin && moscowMinuteOfDay(Date.now()) >= DAY_END_MINUTE; }
+    function isGeoExemptUser(userKey) {
+        let u = globalUsersData && globalUsersData[userKey];
+        let role = u ? u.role : (userKey === currentUser.firstName + '_' + currentUser.lastName ? currentUser.role : null);
+        return role === 'admin' || role === 'superadmin';
+    }
+    function moscowDayEnd(ts) {
+        let m = new Date(ts + 3 * 3600000);
+        return Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), m.getUTCDate(), 20, 10) - 3 * 3600000;
+    }
+    function checkDayEndAutoExit() {
+        if (!currentUser.firstName) return; // ещё не вошли — роль неизвестна
+        if (isOnShift && isAfterDayEnd()) {
+            endShift(true);
+            showToast('🏁 20:10 — рабочий день окончен, вы вышли с линии', 'blue');
+        }
+    }
+    setInterval(checkDayEndAutoExit, 30000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkDayEndAutoExit(); });
+
     function startShift(skipShiftQuestion) {
         if (isShiftBlocked()) { onBlockedShiftTap(); return; }
+        if (isAfterDayEnd()) { showToast('Рабочий день закончился в 20:10 — «Я на линии» снова можно включить после полуночи', 'blue'); return; }
         if (!navigator.geolocation) { showToast("GPS недоступен на этом устройстве"); return; }
         // Смены на сегодня нет — спрашиваем, на смене ли человек; «Да» записывает его во внеплановые
         if (!skipShiftQuestion && !hasShiftToday()) { askOnShiftToday(); return; }
@@ -746,11 +910,11 @@
         }
     }
 
-    function endShift() {
+    function endShift(silent) {
         isOnShift = false;
         if (shiftWatchInterval) { clearInterval(shiftWatchInterval); shiftWatchInterval = null; }
         updateShiftButtonsUI();
-        showToast("Вы вышли с линии.", "blue");
+        if (!silent) showToast("Вы вышли с линии.", "blue");
         if (window.AndroidApp && window.AndroidApp.stopShiftTracking) {
             window.AndroidApp.stopShiftTracking();
         }
@@ -781,6 +945,7 @@
             isOnShift = true;
             if (!shiftWatchInterval) shiftWatchInterval = setInterval(checkGeoPosition, 60000);
             updateShiftButtonsUI();
+            checkDayEndAutoExit();
         }
         // Блокировка из кэша — работает и без сети
         initShiftLockLayer();
@@ -864,6 +1029,8 @@
                 currentUser.firstName + ' ' + currentUser.lastName,
                 currentUser.polygon || '',
                 getPolyPath(currentUser.polygon, 'geo_incidents'));
+            // Админам служба не выключает линию в 20:10 и пишет сбои в любое время
+            if (window.AndroidApp.setTrackingDayEndExempt) window.AndroidApp.setTrackingDayEndExempt(isAdmin);
         } catch (e) { console.log('setTrackingUser: ' + e.message); }
     }
 
@@ -908,6 +1075,52 @@
         return sameDay ? t : d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) + ' ' + t;
     }
 
+    // Цепь из настоящих звеньев: два провисающих отрезка крест-накрест через кнопку
+    // и петли за её краями (тёмные — «с обратной стороны»). Звенья чередуются: кольцо / ребро.
+    function buildShiftLockChain() {
+        const CX = 160, CY = 55, PITCH = 10.5;
+        const front = [
+            [-8, 12, 90, 16, 210, 98, 328, 100],
+            [328, 12, 230, 16, 110, 98, -8, 100]
+        ];
+        const back = [
+            [-8, 12, -34, 30, -34, 82, -8, 100],
+            [328, 12, 354, 30, 354, 82, 328, 100]
+        ];
+        let linksAlong = p => {
+            let pts = [];
+            for (let i = 0; i <= 240; i++) {
+                let t = i / 240, mt = 1 - t;
+                let a = mt * mt * mt, b = 3 * mt * mt * t, c = 3 * mt * t * t, d = t * t * t;
+                pts.push([a * p[0] + b * p[2] + c * p[4] + d * p[6], a * p[1] + b * p[3] + c * p[5] + d * p[7]]);
+            }
+            let out = [], acc = 0, next = PITCH / 2;
+            for (let i = 1; i < pts.length; i++) {
+                let dx = pts[i][0] - pts[i - 1][0], dy = pts[i][1] - pts[i - 1][1];
+                let len = Math.hypot(dx, dy);
+                while (len > 0 && acc + len >= next) {
+                    let f = (next - acc) / len;
+                    out.push({ x: pts[i - 1][0] + dx * f, y: pts[i - 1][1] + dy * f, a: Math.atan2(dy, dx) * 180 / Math.PI });
+                    next += PITCH;
+                }
+                acc += len;
+            }
+            return out;
+        };
+        let link = (l, k) => {
+            let dist = Math.min(Math.hypot(l.x - CX, l.y - CY) / 200, 1);
+            let d = Math.round((1 - dist) * 360); // при закрытии: от краёв к центру
+            let o = Math.round(dist * 200);       // при открытии: от центра к краям
+            let shape = k % 2
+                ? '<rect class="lk-edge" x="-6.8" y="-1.4" width="13.6" height="2.8" rx="1.4"/>'
+                : '<ellipse class="lk-ring" rx="6.6" ry="3.8"/><ellipse class="lk-ring-hi" rx="5.6" ry="2.8"/>';
+            return `<g transform="translate(${l.x.toFixed(1)} ${l.y.toFixed(1)}) rotate(${l.a.toFixed(1)})"><g class="lk" style="--d:${d}ms; --o:${o}ms">${shape}</g></g>`;
+        };
+        let backSvg = back.map(p => linksAlong(p).map(link).join('')).join('');
+        let frontSvg = front.map(p => linksAlong(p).map(link).join('')).join('');
+        return `<g class="chain-back">${backSvg}</g><g class="chain-front">${frontSvg}</g>`;
+    }
+
     function initShiftLockLayer() {
         let btn = document.getElementById('startShiftBtn');
         if (!btn || document.getElementById('shiftLockWrap')) return;
@@ -915,40 +1128,72 @@
         wrap.id = 'shiftLockWrap';
         wrap.className = 'shift-lock-wrap';
         btn.parentNode.insertBefore(wrap, btn);
-        wrap.appendChild(btn);
-        wrap.insertAdjacentHTML('beforeend', `
+        // Сцена = кнопка + цепь; цепь центрируется по кнопке, а подпись идёт ниже сцены
+        let stage = document.createElement('div');
+        stage.className = 'shift-lock-stage';
+        wrap.appendChild(stage);
+        stage.appendChild(btn);
+        wrap.insertAdjacentHTML('beforeend', '<div class="shift-lock-info" id="shiftLockInfo"></div>');
+        stage.insertAdjacentHTML('beforeend', `
             <div class="shift-lock-layer" id="shiftLockLayer" aria-hidden="true">
-                <svg class="lock-chain" viewBox="0 0 320 100">
+                <svg class="lock-chain" viewBox="0 0 320 110">
                     <defs>
-                        <mask id="chainMaskA" maskUnits="userSpaceOnUse" x="-20" y="-20" width="360" height="140">
-                            <path class="chain-reveal" pathLength="1" d="M-10 18 C 60 -12, 100 96, 160 50 S 262 2, 330 78"/>
-                        </mask>
-                        <mask id="chainMaskB" maskUnits="userSpaceOnUse" x="-20" y="-20" width="360" height="140">
-                            <path class="chain-reveal chain-reveal-b" pathLength="1" d="M330 18 C 260 -12, 220 96, 160 50 S 58 2, -10 78"/>
-                        </mask>
+                        <linearGradient id="lkSteel" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#eef2f6"/><stop offset=".45" stop-color="#9aa6b2"/><stop offset="1" stop-color="#4b5563"/>
+                        </linearGradient>
+                        <linearGradient id="lkSteelEdge" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#d7dee6"/><stop offset=".5" stop-color="#8592a0"/><stop offset="1" stop-color="#3f4a56"/>
+                        </linearGradient>
                     </defs>
-                    <g mask="url(#chainMaskA)">
-                        <path class="chain-links" d="M-10 18 C 60 -12, 100 96, 160 50 S 262 2, 330 78"/>
-                        <path class="chain-shine" d="M-10 18 C 60 -12, 100 96, 160 50 S 262 2, 330 78"/>
-                    </g>
-                    <g mask="url(#chainMaskB)">
-                        <path class="chain-links" d="M330 18 C 260 -12, 220 96, 160 50 S 58 2, -10 78"/>
-                        <path class="chain-shine" d="M330 18 C 260 -12, 220 96, 160 50 S 58 2, -10 78"/>
-                    </g>
+                    ${buildShiftLockChain()}
                 </svg>
-                <svg class="lock-pad" id="lockPad" viewBox="0 0 48 56">
-                    <path class="lock-shackle" d="M14 27 V17 a10 10 0 0 1 20 0 V27"/>
-                    <rect class="lock-body" x="6" y="25" width="36" height="28" rx="7"/>
-                    <circle cx="24" cy="37" r="4" class="lock-hole"/>
-                    <rect x="22.5" y="39" width="3" height="7" rx="1.5" class="lock-hole"/>
+                <svg class="lock-pad" id="lockPad" viewBox="0 0 56 66">
+                    <defs>
+                        <linearGradient id="lkBrass" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#ffe9a3"/><stop offset=".35" stop-color="#f6c22b"/><stop offset="1" stop-color="#b07d00"/>
+                        </linearGradient>
+                        <linearGradient id="lkShackle" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0" stop-color="#5b6672"/><stop offset=".4" stop-color="#e8edf2"/><stop offset=".6" stop-color="#b6c0ca"/><stop offset="1" stop-color="#4b5563"/>
+                        </linearGradient>
+                        <radialGradient id="lkHalo"><stop offset="0" stop-color="#ffd54f" stop-opacity=".9"/><stop offset="1" stop-color="#ffd54f" stop-opacity="0"/></radialGradient>
+                        <clipPath id="lkBodyClip"><rect x="6" y="28" width="44" height="34" rx="8"/></clipPath>
+                    </defs>
+                    <circle class="lock-halo" cx="28" cy="40" r="34" fill="url(#lkHalo)"/>
+                    <g class="lock-shackle-g">
+                        <path d="M16 33 V20 a12 12 0 0 1 24 0 V33" fill="none" stroke="#3f4a56" stroke-width="7.5" stroke-linecap="round"/>
+                        <path d="M16 33 V20 a12 12 0 0 1 24 0 V33" fill="none" stroke="url(#lkShackle)" stroke-width="5.5" stroke-linecap="round"/>
+                        <path d="M18.2 22 a9.8 9.8 0 0 1 8 -9.4" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.2" stroke-linecap="round"/>
+                    </g>
+                    <g class="lock-body-g">
+                        <rect x="6" y="28" width="44" height="34" rx="8" fill="url(#lkBrass)" stroke="#8a6400" stroke-width="1.5"/>
+                        <rect x="9" y="30.5" width="38" height="5" rx="2.5" fill="#fff" opacity=".35"/>
+                        <rect x="8" y="56" width="40" height="4" rx="2" fill="#7a5700" opacity=".25"/>
+                        <circle cx="11.5" cy="33.5" r="1.4" fill="#c99700" stroke="#8a6400" stroke-width=".6"/>
+                        <circle cx="44.5" cy="33.5" r="1.4" fill="#c99700" stroke="#8a6400" stroke-width=".6"/>
+                        <circle cx="11.5" cy="56.5" r="1.4" fill="#c99700" stroke="#8a6400" stroke-width=".6"/>
+                        <circle cx="44.5" cy="56.5" r="1.4" fill="#c99700" stroke="#8a6400" stroke-width=".6"/>
+                        <circle cx="28" cy="45" r="8" fill="#8a6400" opacity=".22"/>
+                        <circle cx="28" cy="43.5" r="3.6" fill="#2b1f00"/>
+                        <path d="M26.3 45 h3.4 l1 7 h-5.4 z" fill="#2b1f00"/>
+                        <g class="lock-key-in"><rect x="28" y="42.6" width="14" height="2.6" rx="1.2" fill="#e0a800" stroke="#8a6400" stroke-width=".5"/><circle cx="44" cy="43.9" r="3.6" fill="#f6c22b" stroke="#8a6400" stroke-width=".6"/></g>
+                        <g clip-path="url(#lkBodyClip)"><rect class="lock-glint" x="22" y="24" width="9" height="44" fill="#fff" opacity="0"/></g>
+                    </g>
                 </svg>
             </div>
-            <div class="shift-lock-info" id="shiftLockInfo"></div>
         `);
         document.body.insertAdjacentHTML('beforeend', `
             <div class="shift-lock-key" id="shiftLockKey" aria-label="Ключ — перетащите на замок">
-                <svg viewBox="0 0 64 28"><circle cx="13" cy="14" r="10"/><circle cx="13" cy="14" r="4" class="key-hole"/>
-                <path d="M22 11 H60 V17 H54 V23 H48 V17 H42 V21 H36 V17 H22 Z"/></svg>
+                <svg viewBox="0 0 72 30">
+                    <defs><linearGradient id="lkKey" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffe9a3"/><stop offset=".45" stop-color="#f2b705"/><stop offset="1" stop-color="#a87400"/>
+                    </linearGradient></defs>
+                    <path d="M24 12 H66 a2 2 0 0 1 2 2 V16 H62 V23 H56 V16 H50 V21 H45 V16 H24 Z" fill="url(#lkKey)" stroke="#8a6400" stroke-width="1"/>
+                    <circle cx="14" cy="15" r="11" fill="url(#lkKey)" stroke="#8a6400" stroke-width="1.2"/>
+                    <circle cx="14" cy="15" r="6" fill="none" stroke="#8a6400" stroke-width="1" opacity=".5"/>
+                    <circle cx="11" cy="15" r="2.6" fill="#fff8e1" stroke="#8a6400" stroke-width=".8"/>
+                    <path d="M8 8 a9 9 0 0 1 9 -2.6" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="1.4" stroke-linecap="round"/>
+                    <rect x="26" y="12.8" width="38" height="1.3" rx=".6" fill="#fff" opacity=".55"/>
+                </svg>
             </div>`);
         initShiftLockKeyDrag();
         document.addEventListener('visibilitychange', () => {
@@ -982,9 +1227,11 @@
             + (shiftBlock.reason ? `<div class="shift-lock-reason">${escapeHtml(shiftBlock.reason)}</div>` : '');
         if (animate) {
             layer.classList.remove('closing', 'opening');
+            let pad = document.getElementById('lockPad');
+            if (pad) pad.classList.remove('shake', 'key-near');
             void layer.offsetWidth; // перезапуск CSS-анимации
             layer.classList.add('closing');
-            setTimeout(() => { if (navigator.vibrate) navigator.vibrate(35); }, 1250);
+            setTimeout(() => { if (navigator.vibrate) navigator.vibrate(35); }, 800); // щелчок дужки
         }
         updateShiftLockExpiry();
         if (!shiftLockTimer) shiftLockTimer = setInterval(updateShiftLockExpiry, 1000);
@@ -1006,6 +1253,8 @@
         let wrap = document.getElementById('shiftLockWrap');
         shiftLockShown = false;
         layer.classList.remove('closing');
+        let pad = document.getElementById('lockPad');
+        if (pad) pad.classList.remove('shake', 'key-near');
         void layer.offsetWidth;
         layer.classList.add('opening');
         if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
@@ -1043,18 +1292,24 @@
             key.setPointerCapture(e.pointerId);
             key.classList.add('dragging');
         });
+        let nearLock = e => {
+            let pad = document.getElementById('lockPad').getBoundingClientRect();
+            let kx = e.clientX, ky = e.clientY;
+            return kx > pad.left - 40 && kx < pad.right + 40 && ky > pad.top - 40 && ky < pad.bottom + 40;
+        };
         key.addEventListener('pointermove', e => {
             if (!dragging) return;
             key.style.transform = `translate(${e.clientX - startX}px, ${e.clientY - startY}px) rotate(-20deg)`;
+            // Ключ над замком — замок подсвечивается, чтобы было понятно, что можно отпускать
+            document.getElementById('lockPad').classList.toggle('key-near', nearLock(e));
         });
         let finish = e => {
             if (!dragging) return;
             dragging = false;
             key.classList.remove('dragging');
+            document.getElementById('lockPad').classList.remove('key-near');
             // Попадание считаем по месту, где отпустили палец, — так надёжнее, чем по картинке ключа
-            let pad = document.getElementById('lockPad').getBoundingClientRect();
-            let kx = e.clientX, ky = e.clientY;
-            let hit = kx > pad.left - 40 && kx < pad.right + 40 && ky > pad.top - 40 && ky < pad.bottom + 40;
+            let hit = nearLock(e);
             key.style.transform = '';
             if (hit && isShiftBlocked() && Date.now() >= shiftBlock.until) openShiftLockWithKey();
         };
@@ -1492,25 +1747,28 @@
                                 ${cardsHtml}
                             </div>
                         </div>
-                        <div style="background: white; padding: 24px; border-radius: 16px; border: 1px solid #e0e0e0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
-                            <h3 style="margin-top: 0; color: #333; font-size: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 16px; margin-bottom: 16px;">🔒 Блокировка «Я на линии»</h3>
-                            <div style="font-size: 13px; color: #666; margin-bottom: 14px;">Штрафные часы: на это время кнопка у сотрудника не работает. Блокировка дойдёт до телефона, как только у него появится сеть.</div>
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
-                                <select id="blockUserSelect" style="padding: 12px; border-radius: 8px; border: 1px solid #ced4da;"></select>
-                                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                                    <label style="font-size: 13px;">Штрафных часов <input type="number" id="blockHours" min="0.25" step="0.25" value="1" oninput="updateBlockPreview()" style="width: 80px; padding: 10px; border-radius: 8px; border: 1px solid #ced4da;"></label>
-                                    <label style="font-size: 13px;">или до <input type="datetime-local" id="blockUntil" oninput="updateBlockPreview()" style="padding: 10px; border-radius: 8px; border: 1px solid #ced4da;"></label>
-                                </div>
-                                <input type="text" id="blockReason" maxlength="120" placeholder="Причина (её увидит сотрудник)" style="padding: 12px; border-radius: 8px; border: 1px solid #ced4da;">
-                                <div id="blockPreview" style="font-size: 13px; color: #b71c1c;"></div>
-                                <button class="btn-danger" onclick="createShiftBlock()" style="padding: 12px; border-radius: 8px;">🔒 Заблокировать кнопку</button>
-                            </div>
-                            <h4 style="margin: 20px 0 10px;">Действующие блокировки</h4>
-                            <div id="activeShiftBlocks" style="display: flex; flex-direction: column; gap: 8px;"><div style="color:#888;">Загрузка...</div></div>
-                        </div>
                     </div>
                 `;
                 document.getElementById('mainScreen').appendChild(tabDiv);
+
+                // Блокировка «Я на линии» — во вкладке «Сотрудники», над списком
+                document.getElementById('employeesTab').insertAdjacentHTML('afterbegin', `
+                    <div class="card" id="shiftBlockPanel" style="border: 1px solid #f5c2c7; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 20px;">
+                        <h3 style="margin-top: 0; color: #222; border-bottom: 2px solid var(--danger); padding-bottom: 12px; margin-bottom: 12px;">🔒 Блокировка «Я на линии»</h3>
+                        <div style="font-size: 13px; color: #666; margin-bottom: 14px;">Штрафные часы: на это время кнопка у сотрудника не работает. Блокировка дойдёт до телефона, как только у него появится сеть. Можно также нажать «🔒 Штраф» в карточке сотрудника ниже.</div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <select id="blockUserSelect" style="padding: 12px; border-radius: 8px; border: 1px solid #ced4da;"></select>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                <label style="font-size: 13px;">Штрафных часов <input type="number" id="blockHours" min="0.25" step="0.25" value="1" oninput="updateBlockPreview()" style="width: 80px; padding: 10px; border-radius: 8px; border: 1px solid #ced4da;"></label>
+                                <label style="font-size: 13px;">или до <input type="datetime-local" id="blockUntil" oninput="updateBlockPreview()" style="padding: 10px; border-radius: 8px; border: 1px solid #ced4da;"></label>
+                            </div>
+                            <input type="text" id="blockReason" maxlength="120" placeholder="Причина (её увидит сотрудник)" style="padding: 12px; border-radius: 8px; border: 1px solid #ced4da;">
+                            <div id="blockPreview" style="font-size: 13px; color: #b71c1c;"></div>
+                            <button class="btn-danger" onclick="createShiftBlock()" style="padding: 12px; border-radius: 8px;">🔒 Заблокировать кнопку</button>
+                        </div>
+                        <h4 style="margin: 20px 0 10px;">Действующие блокировки</h4>
+                        <div id="activeShiftBlocks" style="display: flex; flex-direction: column; gap: 8px;"><div style="color:#888;">Загрузка...</div></div>
+                    </div>`);
 
                 window.switchSuperadminPolygon = function(newPoly) {
                     if (newPoly === currentUser.polygon) return;
@@ -1529,8 +1787,11 @@
         if (isAdmin) {
             document.getElementById('tabEmployees').style.display = 'block';
             document.getElementById('tabReports').style.display = 'block';
-            document.getElementById('tabAnalytics').style.display = 'block';
-            document.getElementById('tabAiAdmin').style.display = 'block';
+            // Главному админу «Аналитика» и «ИИ-Админ» не нужны — оставляем их только админам полигонов
+            let showAiTabs = role !== 'superadmin';
+            document.getElementById('tabAnalytics').style.display = showAiTabs ? 'block' : 'none';
+            document.getElementById('tabAiAdmin').style.display = showAiTabs ? 'block' : 'none';
+            document.getElementById('tabGeoTop').style.display = 'block';
 
             if (role === 'superadmin') {
                 if (!document.getElementById('tabSupportAdmin')) {
@@ -1623,6 +1884,14 @@
             if (gd && !gd.value) gd.value = getTodayDateStr();
             loadGeoIncidents();
         }
+        // «Мои сбои» — у всех, включая админов: только свои сбои и опубликованный топ
+        document.getElementById('tabMyGeo').style.display = 'block';
+        let md = document.getElementById('myGeoDate');
+        if (md && !md.value) md.value = getTodayDateStr();
+        attachListener(getPolyPath(poly, 'geo_tops/latest'), 'value', snap => {
+            publishedGeoTop = snap.val();
+            renderPublishedGeoTop();
+        });
         if (role === 'superadmin') listenAllShiftBlocks();
     }
 
@@ -1635,14 +1904,13 @@
         } else if (lastSeenVersion < APP_VERSION) {
             let cl = document.getElementById('changelogContent');
             cl.innerHTML = `<ul>
-                <li><b>🔄 Обновления:</b> Одна кнопка «Обновить» — приложение само скачает и установит новую версию. При обрыве связи докачивает с того же места, а после обновления присылает уведомление «Нажмите, чтобы открыть».</li>
-                <li><b>🟢 «Я на линии» без смены:</b> Если на сегодня у вас нет смены, приложение спросит «Вы сегодня на смене?» — при ответе «Да» вы автоматически попадёте во внеплановые на сегодня.</li>
-                <li><b>📍 Геолокация:</b> Если телефон показывает, что вы вне зоны, приложение перезапускает геолокацию и перепроверяет каждые 10 секунд, пока вы не вернётесь в зону. Делать ничего не нужно.</li>
-                <li><b>🛑 Выход с линии:</b> Исправлено — после «Я НА ЛИНИИ» → выкл. отслеживание и уведомления о зоне полностью останавливаются.</li>
-                <li><b>🔔 Напоминания об отчёте:</b> Теперь приходят только в те дни, когда у вас стоит смена.</li>
-                <li><b>💬 Новая поддержка:</b> Удобный чат с разработчиком — видно историю переписки и ответы прямо в приложении.</li>
-                <li><b>🔄 Обновления:</b> Новые версии приложения теперь скачиваются и устанавливаются надёжнее.</li>
+                <li><b>📍 Мои сбои:</b> Новая вкладка — видно, когда и сколько телефон был вне зоны за день (только ваши сбои).</li>
+                <li><b>🏆 Топ сбоев:</b> Администраторы публикуют рейтинг сбоев за день или неделю — он появится во вкладке «Мои сбои».</li>
+                <li><b>📱 Как настоящее приложение:</b> Кнопки реагируют сразу, без вспышек и выделения текста; экран не «тянется» и не приближается при вводе.</li>
+                <li><b>🔒 Блокировка:</b> Новая анимация — кнопку «Я на линии» обвивает цепь с замком, открыть можно ключом.</li>
+                <li><b>🏁 20:10:</b> В 20:10 приложение само выводит с линии, сбои после этого не записываются.</li>
             </ul>`;
+            // Здесь только изменения ЭТОЙ версии — старые пункты удаляем при каждом выпуске
             document.getElementById('changelogModal').style.display = 'flex';
         }
     }
@@ -1959,7 +2227,7 @@
     }
 
     function switchTab(tab) {
-        let tabs = ['personalTab', 'generalTab', 'vacationsTab', 'votingTab', 'employeesTab', 'reportsTab', 'analyticsTab', 'aiAdminTab'];
+        let tabs = ['personalTab', 'generalTab', 'vacationsTab', 'votingTab', 'employeesTab', 'reportsTab', 'analyticsTab', 'aiAdminTab', 'myGeoTab', 'geoTopTab'];
         if (document.getElementById('supportAdminTab')) tabs.push('supportAdminTab');
         if (document.getElementById('superadminDashboardTab')) tabs.push('superadminDashboardTab');
         tabs.forEach(t => { if(document.getElementById(t)) document.getElementById(t).style.display = 'none'; });
@@ -1978,6 +2246,8 @@
         if (tab === 'vacations') {
             renderAllVacations();
         }
+        if (tab === 'myGeo') loadMyGeoIncidents();
+        if (tab === 'geoTop') loadGeoTop();
     }
 
     function setMode(mode, element) {
@@ -2955,33 +3225,244 @@ function submitReport(isNoComment) {
 
         geoIncidentsRef = db.ref(getPolyPath(currentUser.polygon, `geo_incidents/${d}`));
         geoIncidentsCb = snap => {
-            let items = Object.values(snap.val() || {}).sort((a, b) => (a.start || 0) - (b.start || 0));
+            let items = normalizeGeoItems(Object.values(snap.val() || {}));
             if (!items.length) {
                 summary.innerHTML = '';
                 list.innerHTML = '<p style="color:#2e7d32;">✅ Сбоев геолокации за этот день нет.</p>';
                 return;
             }
-            let fmt = ts => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            let dur = sec => sec < 60 ? `${sec} с` : `${Math.round(sec / 60)} мин`;
-            let perUser = {};
-            items.forEach(it => {
-                let u = perUser[it.userKey] || (perUser[it.userKey] = { name: it.name || it.userKey, count: 0, sec: 0 });
-                u.count++; u.sec += it.durationSec || 0;
-            });
-            let users = Object.values(perUser).sort((a, b) => b.sec - a.sec);
-            summary.innerHTML = `<div style="font-weight:bold; margin-bottom:6px;">Всего сбоев: ${items.length} · сотрудников: ${users.length}</div>`
-                + users.map(u => `<div style="font-size:13px;">${escapeHtml(u.name)} — ${u.count} раз, ${dur(u.sec)}</div>`).join('');
-            list.innerHTML = items.map(it => {
-                let kind = it.kind === 'no_fix' ? '📡 телефон не выдавал координаты' : '🚷 координаты вне зоны';
-                let end = it.resolved ? '✅ вернулся в зону' : '⏹ закрыт выходом с линии';
-                return `<div style="padding: 12px; background: #fff5f5; border: 1px solid #f5c2c7; border-radius: 8px;">
-                    <b>${escapeHtml(it.name || it.userKey)}</b>
-                    <div style="font-size: 14px; margin-top: 4px;">🕒 ${fmt(it.start)} – ${fmt(it.end)} (${dur(it.durationSec || 0)})</div>
-                    <div style="font-size: 12px; color: #666; margin-top: 2px;">${kind} · перезапусков: ${it.attempts || 0} · ${end}</div>
-                </div>`;
-            }).join('');
+            let users = groupGeoByUser(items);
+            let totalSec = users.reduce((s, u) => s + u.sec, 0);
+            summary.innerHTML = geoStatTiles([[items.length, 'сбоев'], [users.length, 'сотрудников'], [geoDur(totalSec), 'вне зоны']]);
+            list.innerHTML = users.map(u => `
+                <details class="geo-user">
+                    <summary>
+                        <div class="geo-user-head">
+                            <b>${escapeHtml(u.name)}</b>
+                            <span class="geo-user-meta">${u.count} ${geoPlural(u.count, 'сбой', 'сбоя', 'сбоев')} · ${geoDur(u.sec)}</span>
+                        </div>
+                        ${geoTimeline(u.items)}
+                    </summary>
+                    ${geoIntervalRows(u.items)}
+                </details>`).join('');
         };
         geoIncidentsRef.on('value', geoIncidentsCb);
+    }
+
+    // ---------- Общие помощники для отчётов о сбоях ----------
+    // Сбои после 20:10 не считаются (их могли прислать старые версии приложения); начатые раньше — обрезаем по 20:10
+    function normalizeGeoItems(items) {
+        return items.filter(it => it && it.start && (isGeoExemptUser(it.userKey) || moscowMinuteOfDay(it.start) < DAY_END_MINUTE)).map(it => {
+            if (isGeoExemptUser(it.userKey)) return it;
+            let cap = moscowDayEnd(it.start);
+            if (!it.end || it.end <= cap) return it;
+            return Object.assign({}, it, { end: cap, durationSec: Math.max(0, Math.round((cap - it.start) / 1000)) });
+        });
+    }
+
+    function geoDur(sec) {
+        sec = Math.round(sec || 0);
+        if (sec < 60) return `${sec} с`;
+        let m = Math.round(sec / 60);
+        return m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч ${m % 60} мин`;
+    }
+    function geoPlural(n, one, few, many) {
+        let n10 = n % 10, n100 = n % 100;
+        if (n10 === 1 && n100 !== 11) return one;
+        if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return few;
+        return many;
+    }
+    function geoTime(ts) { return new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+    function geoStatTiles(pairs) {
+        return `<div class="geo-stats">${pairs.map(([v, l]) => `<div class="geo-stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>`;
+    }
+
+    function groupGeoByUser(items) {
+        let perUser = {};
+        items.forEach(it => {
+            let k = it.userKey || it.name || '?';
+            let u = perUser[k] || (perUser[k] = { key: k, name: it.name || String(k).replace(/_/g, ' '), count: 0, sec: 0, items: [] });
+            u.count++; u.sec += it.durationSec || 0; u.items.push(it);
+        });
+        return Object.values(perUser).sort((a, b) => b.sec - a.sec || b.count - a.count);
+    }
+
+    // Сбои, идущие почти подряд (разрыв меньше 3 минут), показываем одним отрезком — список становится в разы короче
+    function mergeGeoIncidents(items) {
+        let sorted = items.slice().sort((a, b) => a.start - b.start);
+        let out = [];
+        sorted.forEach(it => {
+            let end = it.end || it.start;
+            let last = out[out.length - 1];
+            if (last && it.start - last.end <= 3 * 60000) {
+                last.end = Math.max(last.end, end);
+                last.count++; last.sec += it.durationSec || 0; last.attempts += it.attempts || 0;
+                last.noFix = last.noFix || it.kind === 'no_fix';
+                last.resolved = it.resolved;
+            } else {
+                out.push({ start: it.start, end: end, count: 1, sec: it.durationSec || 0, attempts: it.attempts || 0,
+                           noFix: it.kind === 'no_fix', resolved: it.resolved });
+            }
+        });
+        return out;
+    }
+
+    // Полоска-шкала дня: красные отрезки — вне зоны, оранжевые — телефон не выдавал координаты
+    function geoTimeline(items) {
+        let merged = mergeGeoIncidents(items);
+        if (!merged.length) return '';
+        let from = new Date(merged[0].start); from.setMinutes(0, 0, 0);
+        let to = new Date(merged[merged.length - 1].end); to.setMinutes(0, 0, 0); to.setHours(to.getHours() + 1);
+        let span = Math.max(to - from, 3600000);
+        let segs = merged.map(m => {
+            let left = (m.start - from) / span * 100;
+            let width = Math.max((m.end - m.start) / span * 100, 1.2);
+            return `<i class="${m.noFix ? 'nofix' : ''}" style="left:${left.toFixed(2)}%; width:${width.toFixed(2)}%;"></i>`;
+        }).join('');
+        return `<div class="geo-timeline">${segs}</div>
+                <div class="geo-timeline-axis"><span>${geoTime(from)}</span><span>${geoTime(to)}</span></div>`;
+    }
+
+    function geoIntervalRows(items) {
+        return `<div class="geo-rows">${mergeGeoIncidents(items).map(m => `
+            <div class="geo-row">
+                <span class="geo-row-time">${geoTime(m.start)}–${geoTime(m.end)}</span>
+                <span class="geo-row-kind">${m.noFix ? '📡' : '🚷'}${m.count > 1 ? ` ×${m.count}` : ''}</span>
+                <span class="geo-row-dur">${geoDur(m.sec)}</span>
+            </div>`).join('')}</div>
+            <div class="geo-legend">🚷 вне зоны · 📡 нет координат · ×N — сбоев подряд</div>`;
+    }
+
+    function shiftGeoDate(inputId, delta, reload) {
+        let input = document.getElementById(inputId);
+        let base = input.value || getTodayDateStr();
+        input.value = geoAddDays(base, delta);
+        reload();
+    }
+    function geoAddDays(dateStr, delta) {
+        let [y, m, d] = dateStr.split('-').map(Number);
+        let dt = new Date(Date.UTC(y, m - 1, d + delta));
+        return dt.toISOString().slice(0, 10);
+    }
+
+    // ---------- МОИ СБОИ (обычный сотрудник видит только свои) ----------
+    let myGeoRef = null, myGeoCb = null;
+
+    function loadMyGeoIncidents() {
+        let input = document.getElementById('myGeoDate');
+        if (!input.value) input.value = getTodayDateStr();
+        let box = document.getElementById('myGeoContent');
+        let userKey = currentUser.firstName + '_' + currentUser.lastName;
+        if (myGeoRef) myGeoRef.off('value', myGeoCb);
+        box.innerHTML = '<p style="color:#888;">Загрузка...</p>';
+        // Ключ записи — «<userKey>_<время начала>», поэтому забираем только свои записи, чужие не скачиваются
+        myGeoRef = db.ref(getPolyPath(currentUser.polygon, `geo_incidents/${input.value}`))
+            .orderByKey().startAt(userKey + '_').endAt(userKey + '_');
+        myGeoCb = snap => {
+            let items = normalizeGeoItems(Object.values(snap.val() || {}).filter(it => it && it.userKey === userKey));
+            if (!items.length) { box.innerHTML = '<p style="color:#2e7d32;">✅ За этот день сбоев нет.</p>'; return; }
+            let sec = items.reduce((s, it) => s + (it.durationSec || 0), 0);
+            let longest = items.reduce((mx, it) => Math.max(mx, it.durationSec || 0), 0);
+            box.innerHTML = geoStatTiles([[items.length, geoPlural(items.length, 'сбой', 'сбоя', 'сбоев')], [geoDur(sec), 'всего'], [geoDur(longest), 'самый долгий']])
+                + `<div style="margin-top:14px;">${geoTimeline(items)}</div>` + geoIntervalRows(items);
+        };
+        myGeoRef.on('value', myGeoCb);
+    }
+
+    // ---------- ТОП СБОЕВ (админы смотрят и публикуют) ----------
+    let geoTopPeriod = 'day';
+    let geoTopDate = null;
+    let geoTopRows = [];
+    let publishedGeoTop = null;
+    let geoTopLoadId = 0;
+
+    function setGeoTopPeriod(p) {
+        geoTopPeriod = p;
+        document.getElementById('geoTopDayBtn').classList.toggle('active', p === 'day');
+        document.getElementById('geoTopWeekBtn').classList.toggle('active', p === 'week');
+        loadGeoTop();
+    }
+    function shiftGeoTop(dir) {
+        geoTopDate = geoAddDays(geoTopDate || getTodayDateStr(), dir * (geoTopPeriod === 'week' ? 7 : 1));
+        loadGeoTop();
+    }
+    function geoTopDays() {
+        let base = geoTopDate || getTodayDateStr();
+        if (geoTopPeriod === 'day') return [base];
+        let [y, m, d] = base.split('-').map(Number);
+        let wd = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7; // 0 = понедельник
+        let monday = geoAddDays(base, -wd);
+        return [0, 1, 2, 3, 4, 5, 6].map(i => geoAddDays(monday, i));
+    }
+    function geoDayLabel(dateStr) {
+        let [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+    function geoTopLabel(days) {
+        return days.length === 1 ? geoDayLabel(days[0]) : `${geoDayLabel(days[0])} – ${geoDayLabel(days[6])}`;
+    }
+
+    function loadGeoTop() {
+        if (!isAdmin) return;
+        let days = geoTopDays();
+        let label = geoTopLabel(days);
+        document.getElementById('geoTopLabel').textContent = (geoTopPeriod === 'day' ? 'День: ' : 'Неделя: ') + label;
+        let box = document.getElementById('geoTopContent');
+        box.innerHTML = '<p style="color:#888;">Считаем...</p>';
+        let loadId = ++geoTopLoadId;
+        Promise.all(days.map(d => db.ref(getPolyPath(currentUser.polygon, `geo_incidents/${d}`)).once('value')))
+            .then(snaps => {
+                if (loadId !== geoTopLoadId) return;
+                let items = [];
+                snaps.forEach(s => items.push(...normalizeGeoItems(Object.values(s.val() || {}))));
+                // Место в топе — по числу сбоев, при равенстве — по времени вне зоны
+                geoTopRows = groupGeoByUser(items).sort((a, b) => b.count - a.count || b.sec - a.sec)
+                    .map(u => ({ name: u.name, key: u.key, count: u.count, sec: u.sec }));
+                box.innerHTML = renderGeoTopList(geoTopRows, null);
+                document.getElementById('geoTopPublishBtn').style.display = geoTopRows.length ? 'block' : 'none';
+            })
+            .catch(e => { if (loadId === geoTopLoadId) box.innerHTML = `<p style="color:var(--danger);">Не удалось загрузить: ${escapeHtml(e.message)}</p>`; });
+    }
+
+    function renderGeoTopList(rows, highlightKey) {
+        if (!rows || !rows.length) return '<p style="color:#2e7d32;">✅ Сбоев нет — все молодцы!</p>';
+        let max = Math.max(...rows.map(r => r.count), 1);
+        let medals = ['🥇', '🥈', '🥉'];
+        return `<div class="geo-top">${rows.map((r, i) => `
+            <div class="geo-top-row${i < 3 ? ' podium' : ''}${r.key === highlightKey ? ' me' : ''}" style="--w:${(r.count / max * 100).toFixed(1)}%; --i:${i};">
+                <span class="geo-top-place">${medals[i] || (i + 1)}</span>
+                <span class="geo-top-name">${escapeHtml(r.name)}${r.key === highlightKey ? ' (вы)' : ''}</span>
+                <span class="geo-top-val"><b>${r.count}</b> · ${geoDur(r.sec)}</span>
+            </div>`).join('')}</div>`;
+    }
+
+    function publishGeoTop() {
+        if (!isAdmin || !geoTopRows.length) return;
+        let days = geoTopDays();
+        let post = {
+            period: geoTopPeriod,
+            label: geoTopLabel(days),
+            rows: geoTopRows.slice(0, 10),
+            by: `${currentUser.firstName} ${currentUser.lastName}`,
+            at: Date.now()
+        };
+        db.ref(getPolyPath(currentUser.polygon, 'geo_tops/latest')).set(post)
+            .then(() => showToast('Топ сбоев опубликован — его увидят все сотрудники полигона', 'green'))
+            .catch(e => showToast('Не удалось опубликовать: ' + e.message, 'red'));
+    }
+
+    function renderPublishedGeoTop() {
+        let card = document.getElementById('myGeoTopCard');
+        let note = document.getElementById('geoTopPublished');
+        let t = publishedGeoTop;
+        if (note) note.textContent = t ? `Сейчас опубликован: ${t.period === 'week' ? 'неделя' : 'день'} ${t.label} (${t.by}, ${formatBlockTime(t.at)})` : '';
+        if (!card) return;
+        if (!t || !t.rows) { card.style.display = 'none'; return; }
+        let me = currentUser.firstName + '_' + currentUser.lastName;
+        card.style.display = 'block';
+        card.innerHTML = `<h3 style="margin-top:0; border-bottom: 2px solid #f59e0b; padding-bottom: 12px; color: #222;">🏆 Топ сбоев · ${t.period === 'week' ? 'неделя' : 'день'} ${escapeHtml(t.label)}</h3>
+            ${renderGeoTopList(t.rows, me)}
+            <div style="font-size:12px; color:#888; margin-top:10px;">Опубликовал ${escapeHtml(t.by || '')} · ${formatBlockTime(t.at)}</div>`;
     }
 
     // ---------- БЛОКИРОВКИ «Я НА ЛИНИИ»: панель суперадмина ----------

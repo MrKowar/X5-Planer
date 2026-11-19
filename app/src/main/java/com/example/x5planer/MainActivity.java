@@ -785,6 +785,14 @@ public class MainActivity extends AppCompatActivity {
                     .apply();
         }
 
+        // Админы и главный админ: правило «в 20:10 выход с линии, сбои после 20:10 не пишутся» на них не действует
+        @android.webkit.JavascriptInterface
+        public void setTrackingDayEndExempt(boolean exempt) {
+            getSharedPreferences(GeoTrackingService.INCIDENT_PREFS, MODE_PRIVATE).edit()
+                    .putBoolean("day_end_exempt", exempt)
+                    .apply();
+        }
+
         // Сохраняет даты, в которые у пользователя стоит смена (JSON-массив "yyyy-MM-dd").
         // Напоминание об отчёте приходит только в эти дни.
         @android.webkit.JavascriptInterface

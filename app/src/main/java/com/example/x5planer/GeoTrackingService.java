@@ -51,6 +51,73 @@ public class GeoTrackingService extends Service {
     private static final int ZONE_WARNING_NOTIFICATION_ID = 5001;
     private static final int RESTART_NOTIFICATION_ID = 5002;
     private static final String SERVICE_CHANNEL_ID = "geo_tracking_service";
+    private static final int AUTO_END_NOTIFICATION_ID = 5003;
+    // Конец рабочего дня по Москве: в 20:10 приложение само снимает с линии, сбои после 20:10 не пишутся
+    static final int DAY_END_MINUTE = 20 * 60 + 10;
+    private static final TimeZone MOSCOW = TimeZone.getTimeZone("Europe/Moscow");
+
+    // Сколько минут прошло с полуночи по Москве
+    static int moscowMinuteOfDay(long ts) {
+        java.util.Calendar c = java.util.Calendar.getInstance(MOSCOW);
+        c.setTimeInMillis(ts);
+        return c.get(java.util.Calendar.HOUR_OF_DAY) * 60 + c.get(java.util.Calendar.MINUTE);
+    }
+
+    // 20:10 того же московского дня, что и ts
+    static long dayEndFor(long ts) {
+        java.util.Calendar c = java.util.Calendar.getInstance(MOSCOW);
+        c.setTimeInMillis(ts);
+        c.set(java.util.Calendar.HOUR_OF_DAY, DAY_END_MINUTE / 60);
+        c.set(java.util.Calendar.MINUTE, DAY_END_MINUTE % 60);
+        c.set(java.util.Calendar.SECOND, 0);
+        c.set(java.util.Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
+    }
+
+    // Рабочий день окончен (после 20:10 по Москве) — для админов и главного админа никогда
+    private boolean isDayOver() {
+        if (getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).getBoolean("day_end_exempt", false)) return false;
+        return moscowMinuteOfDay(System.currentTimeMillis()) >= DAY_END_MINUTE;
+    }
+
+    private final Runnable autoEndRunnable = this::autoEndIfDayOver;
+
+    // 20:10 наступило — закрываем открытый сбой временем 20:10 и выходим с линии
+    private void autoEndIfDayOver() {
+        if (stopped) return;
+        if (!isDayOver()) {
+            scheduleAutoEnd();
+            return;
+        }
+        if (incidentStartTs != 0) {
+            writeIncident(this, incidentStartTs, System.currentTimeMillis(), incidentCycles, incidentHadFix, false);
+            incidentStartTs = 0;
+            getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).edit()
+                    .remove("open_start").remove("open_cycles").remove("open_had_fix").apply();
+        }
+        showAutoEndNotification();
+        stopSelf();
+    }
+
+    private void scheduleAutoEnd() {
+        handler.removeCallbacks(autoEndRunnable);
+        long now = System.currentTimeMillis();
+        long end = dayEndFor(now);
+        if (end > now) handler.postDelayed(autoEndRunnable, end - now + 1000);
+    }
+
+    private void showAutoEndNotification() {
+        boolean canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        if (!canNotify) return;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setContentTitle("X5 Planer")
+                .setContentText("🏁 20:10 — рабочий день окончен, вы вышли с линии")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true);
+        NotificationManagerCompat.from(this).notify(AUTO_END_NOTIFICATION_ID, builder.build());
+    }
 
     // Та же геозона (Дериглазова), что и в index.html — если полигон поменяется, обновляйте в обоих местах
     private static final double[][] WORK_ZONE_POLYGON = {
@@ -90,7 +157,13 @@ public class GeoTrackingService extends Service {
         isRunning = true;
         // Свежий запуск службы — если прошлый сбой не успел закрыться, отправляем его
         if (locationListener == null && incidentStartTs == 0) flushStaleIncident();
+        // Уже после 20:10 (например, система перезапустила службу вечером) — сразу снимаем с линии
+        if (isDayOver()) {
+            autoEndIfDayOver();
+            return START_NOT_STICKY;
+        }
         startLocationUpdates();
+        scheduleAutoEnd();
         return START_STICKY;
     }
 
@@ -112,6 +185,8 @@ public class GeoTrackingService extends Service {
             @Override
             public void onLocationChanged(Location location) {
                 if (stopped || restartInProgress) return;
+                // Таймер мог «проспать» 20:10 в режиме энергосбережения — проверяем при каждой точке
+                if (isDayOver()) { autoEndIfDayOver(); return; }
                 if (!isInZone(location)) {
                     // Вне зоны — сначала перезапускаем определение местоположения, потом перепроверяем
                     restartLocationAndRecheck();
@@ -147,6 +222,8 @@ public class GeoTrackingService extends Service {
     // Цикл раз в 10 с, пока курьер вне зоны: 10 переключений (выкл/вкл) за 2,7 с, последнее —
     // включение, затем ждём свежую точку до конца 10-секундного окна. В зоне — снова раз в минуту.
     private void restartLocationAndRecheck() {
+        if (stopped) return;
+        if (isDayOver()) { autoEndIfDayOver(); return; }
         restartInProgress = true;
         if (incidentStartTs == 0) startIncident();
         incidentCycles++;
@@ -260,6 +337,11 @@ public class GeoTrackingService extends Service {
         String userKey = prefs.getString("user_key", "");
         String basePath = prefs.getString("incidents_path", "");
         if (userKey.isEmpty() || basePath.isEmpty()) return;
+        // Сбои после 20:10 не считаются; начавшийся раньше сбой обрезаем по 20:10 (админов это не касается)
+        if (!prefs.getBoolean("day_end_exempt", false)) {
+            if (moscowMinuteOfDay(start) >= DAY_END_MINUTE) return;
+            end = Math.min(end, dayEndFor(start));
+        }
 
         SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         fmt.setTimeZone(TimeZone.getTimeZone("Europe/Moscow"));
