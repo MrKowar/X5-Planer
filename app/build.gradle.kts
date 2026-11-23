@@ -17,8 +17,8 @@ android {
         applicationId = "com.example.x5planer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "18.0"
+        versionCode = 19
+        versionName = "19.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -46,4 +46,6 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     implementation("androidx.work:work-runtime:2.9.1")
     implementation("com.google.firebase:firebase-database:20.3.0")
+    // Местоположение через сервисы Google — как в Google Картах
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 }

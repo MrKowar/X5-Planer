@@ -80,6 +80,124 @@ public class GeoTrackingService extends Service {
         return moscowMinuteOfDay(System.currentTimeMillis()) >= DAY_END_MINUTE;
     }
 
+    // ---------- ГЕО+ (платная функция по ключу; у админов — всегда) ----------
+    // Проверка «10 с → перезапуск → раз в минуту», запоминание точек, где пропадало и возвращалось гео,
+    // напоминания о проблемных зонах и подсказка, куда отойти.
+    private static final int ZONE_NOTIFICATION_ID = 5004;
+    private Location lastGood = null;          // последняя точка в рабочей зоне
+    private long lastGoodTs = 0;
+    private double lossLat = Double.NaN, lossLng = Double.NaN; // где пропало гео в текущем сбое
+    private boolean firstCheckPending = false; // идёт «мягкая» проверка через 10 с, ещё без перезапуска
+
+    private boolean isGeoPlus() {
+        SharedPreferences p = getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
+        return p.getBoolean("day_end_exempt", false) || p.getLong("geo_plus_until", 0) > System.currentTimeMillis();
+    }
+
+    // Точка потери гео = последняя хорошая точка, если она свежая (иначе место неизвестно)
+    private void markLossPoint() {
+        if (lastGood != null && System.currentTimeMillis() - lastGoodTs < 180000) {
+            lossLat = lastGood.getLatitude();
+            lossLng = lastGood.getLongitude();
+        } else {
+            lossLat = Double.NaN;
+            lossLng = Double.NaN;
+        }
+        SharedPreferences.Editor e = getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).edit();
+        if (Double.isNaN(lossLat)) e.remove("open_loss_lat").remove("open_loss_lng");
+        else e.putString("open_loss_lat", String.valueOf(lossLat)).putString("open_loss_lng", String.valueOf(lossLng));
+        e.apply();
+    }
+
+    // Гео+: точка вне зоны — сначала просто перепроверяем через 10 с, перезапуск только если опять плохо
+    private void beginSoftCheck() {
+        restartInProgress = true;
+        firstCheckPending = true;
+        startIncident();
+        markLossPoint();
+        saveOpenIncident();
+        notifyHintIfKnownZone();
+        handler.postDelayed(() -> { if (!stopped) requestFreshFix(); }, CYCLE_MS);
+    }
+
+    // Сбой оказался мгновенным (через 10 с всё в порядке) — не записываем его
+    private void discardIncident() {
+        incidentStartTs = 0;
+        incidentCycles = 0;
+        incidentWarned = false;
+        lossLat = Double.NaN; lossLng = Double.NaN;
+        getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).edit()
+                .remove("open_start").remove("open_cycles").remove("open_had_fix")
+                .remove("open_loss_lat").remove("open_loss_lng").apply();
+    }
+
+    // Проблемные зоны приходят из index.html: [{id, lat, lng, r, couriers, count, hintDist, hintDir}]
+    private org.json.JSONArray loadZones() {
+        try {
+            return new org.json.JSONArray(getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).getString("geo_zones", "[]"));
+        } catch (Exception e) {
+            return new org.json.JSONArray();
+        }
+    }
+
+    @Nullable
+    private JSONObject zoneAt(double lat, double lng, double extraMeters) {
+        org.json.JSONArray zones = loadZones();
+        float[] d = new float[1];
+        for (int i = 0; i < zones.length(); i++) {
+            JSONObject z = zones.optJSONObject(i);
+            if (z == null) continue;
+            Location.distanceBetween(lat, lng, z.optDouble("lat"), z.optDouble("lng"), d);
+            if (d[0] <= z.optDouble("r", 35) + extraMeters) return z;
+        }
+        return null;
+    }
+
+    private static String hintText(JSONObject z) {
+        int dist = z.optInt("hintDist", 0);
+        String dir = z.optString("hintDir", "");
+        return dist > 0 ? "Отойдите ~" + dist + " м " + dir + " — там гео возвращалось" : "";
+    }
+
+    // Один раз в день на зону: «здесь у 2+ курьеров пропадало гео»
+    private void checkZoneReminder(Location loc) {
+        if (!isGeoPlus()) return;
+        JSONObject z = zoneAt(loc.getLatitude(), loc.getLongitude(), 20);
+        if (z == null || z.optInt("couriers", 0) < 2) return;
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        fmt.setTimeZone(MOSCOW);
+        String key = "zone_notified_" + z.optString("id") + "_" + fmt.format(new Date());
+        SharedPreferences p = getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
+        if (p.getBoolean(key, false)) return;
+        p.edit().putBoolean(key, true).apply();
+        String hint = hintText(z);
+        showZoneNotification("⚠️ Здесь у " + z.optInt("couriers") + " курьеров пропадало гео"
+                + (hint.isEmpty() ? "" : ". Если пропадёт — " + hint.substring(0, 1).toLowerCase() + hint.substring(1)));
+    }
+
+    // Гео пропало в известной зоне, где есть подсказка — сразу говорим, куда отойти
+    private void notifyHintIfKnownZone() {
+        if (Double.isNaN(lossLat) || !isGeoPlus()) return;
+        JSONObject z = zoneAt(lossLat, lossLng, 15);
+        if (z == null) return;
+        String hint = hintText(z);
+        if (!hint.isEmpty()) showZoneNotification("📍 Тут гео часто пропадает. " + hint);
+    }
+
+    private void showZoneNotification(String text) {
+        boolean canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        if (!canNotify) return;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_map)
+                .setContentTitle("X5 Planer · Гео+")
+                .setContentText(text)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true);
+        NotificationManagerCompat.from(this).notify(ZONE_NOTIFICATION_ID, builder.build());
+    }
+
     private final Runnable autoEndRunnable = this::autoEndIfDayOver;
 
     // 20:10 наступило — закрываем открытый сбой временем 20:10 и выходим с линии
@@ -187,7 +305,14 @@ public class GeoTrackingService extends Service {
                 if (stopped || restartInProgress) return;
                 // Таймер мог «проспать» 20:10 в режиме энергосбережения — проверяем при каждой точке
                 if (isDayOver()) { autoEndIfDayOver(); return; }
-                if (!isInZone(location)) {
+                if (isInZone(location)) {
+                    lastGood = location;
+                    lastGoodTs = System.currentTimeMillis();
+                    checkZoneReminder(location);
+                } else if (isGeoPlus()) {
+                    // Гео+: сначала обычная перепроверка через 10 с, перезапуск — только если снова вне зоны
+                    beginSoftCheck();
+                } else {
                     // Вне зоны — сначала перезапускаем определение местоположения, потом перепроверяем
                     restartLocationAndRecheck();
                 }
@@ -197,11 +322,50 @@ public class GeoTrackingService extends Service {
             @Override public void onProviderDisabled(String provider) {}
         };
 
+        // Гео как в Google Картах: сервисы Google (Fused Location). Нет сервисов Google — GPS/сеть напрямую.
+        try {
+            if (com.google.android.gms.common.GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
+                    == com.google.android.gms.common.ConnectionResult.SUCCESS) {
+                fused = com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(this);
+                fusedCallback = new com.google.android.gms.location.LocationCallback() {
+                    @Override
+                    public void onLocationResult(@androidx.annotation.NonNull com.google.android.gms.location.LocationResult result) {
+                        Location l = result.getLastLocation();
+                        if (l != null && locationListener != null) locationListener.onLocationChanged(l);
+                    }
+                };
+            }
+        } catch (Throwable t) {
+            fused = null;
+        }
+
         if (!registerUpdates()) stopSelf();
     }
 
+    private com.google.android.gms.location.FusedLocationProviderClient fused;
+    private com.google.android.gms.location.LocationCallback fusedCallback;
+    private com.google.android.gms.tasks.CancellationTokenSource freshFixCts;
+    private int checkSeq = 0; // номер проверки — чтобы опоздавший ответ не закрыл следующую
+
+    private void unregisterUpdates() {
+        if (fused != null && fusedCallback != null) fused.removeLocationUpdates(fusedCallback);
+        else if (locationManager != null && locationListener != null) locationManager.removeUpdates(locationListener);
+    }
+
+    @SuppressWarnings("MissingPermission")
     private boolean registerUpdates() {
         if (stopped) return true;
+        if (fused != null) {
+            try {
+                com.google.android.gms.location.LocationRequest req =
+                        new com.google.android.gms.location.LocationRequest.Builder(
+                                com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, 60000).build();
+                fused.requestLocationUpdates(req, fusedCallback, Looper.getMainLooper());
+                return true;
+            } catch (SecurityException e) {
+                return false;
+            }
+        }
         try {
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 60000, 0, locationListener);
@@ -225,7 +389,7 @@ public class GeoTrackingService extends Service {
         if (stopped) return;
         if (isDayOver()) { autoEndIfDayOver(); return; }
         restartInProgress = true;
-        if (incidentStartTs == 0) startIncident();
+        if (incidentStartTs == 0) { startIncident(); markLossPoint(); }
         incidentCycles++;
         saveOpenIncident();
         showRestartNotification("🔄 Перезапуск геолокации… (попытка " + incidentCycles + ")", 0);
@@ -233,15 +397,31 @@ public class GeoTrackingService extends Service {
             final boolean turnOn = step % 2 == 0;
             handler.postDelayed(() -> {
                 if (turnOn) registerUpdates();
-                else locationManager.removeUpdates(locationListener);
+                else unregisterUpdates();
             }, (step - 1) * RESTART_STEP_MS);
         }
         handler.postDelayed(this::requestFreshFix, RESTART_TOGGLES * RESTART_STEP_MS);
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "MissingPermission"})
     private void requestFreshFix() {
         if (stopped) return;
+        final int seq = ++checkSeq;
+        if (fused != null) {
+            // Свежая точка от сервисов Google, как в Google Картах
+            freshFixCts = new com.google.android.gms.tasks.CancellationTokenSource();
+            try {
+                fused.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, freshFixCts.getToken())
+                        .addOnSuccessListener(loc -> {
+                            if (seq == checkSeq && loc != null) finishRecheck(isInZone(loc), loc);
+                        });
+            } catch (SecurityException e) {
+                finishRecheck(false, null);
+                return;
+            }
+            handler.postDelayed(recheckTimeout, CYCLE_MS - RESTART_TOGGLES * RESTART_STEP_MS);
+            return;
+        }
         verifyListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
@@ -271,14 +451,29 @@ public class GeoTrackingService extends Service {
     private void finishRecheck(boolean inZone, @Nullable Location location) {
         if (stopped || !restartInProgress) return;
         handler.removeCallbacks(recheckTimeout);
+        checkSeq++; // ответ на эту проверку больше не ждём
+        if (freshFixCts != null) { freshFixCts.cancel(); freshFixCts = null; }
         if (verifyListener != null) {
             locationManager.removeUpdates(verifyListener);
             verifyListener = null;
         }
         if (location != null) incidentHadFix = true;
+        if (firstCheckPending) {
+            firstCheckPending = false;
+            if (inZone) {
+                // Через 10 с всё нормально — это был мгновенный скачок, сбой не записываем
+                restartInProgress = false;
+                lastGood = location; lastGoodTs = System.currentTimeMillis();
+                discardIncident();
+            } else {
+                handler.post(this::restartLocationAndRecheck);
+            }
+            return;
+        }
         if (inZone) {
             restartInProgress = false;
-            finishIncident(true);
+            if (location != null) { lastGood = location; lastGoodTs = System.currentTimeMillis(); }
+            finishIncident(true, location);
             showRestartNotification("✅ Геолокация перезапущена — вы в рабочей зоне", 10000);
         } else {
             // Всё ещё вне зоны (или нет точки) — предупреждаем один раз за сбой и сразу
@@ -311,14 +506,20 @@ public class GeoTrackingService extends Service {
                 .apply();
     }
 
-    private void finishIncident(boolean resolved) {
+    private void finishIncident(boolean resolved) { finishIncident(resolved, null); }
+
+    // fix — точка, где гео вернулось (нужна для подсказки «куда отойти»)
+    private void finishIncident(boolean resolved, @Nullable Location fix) {
         if (incidentStartTs == 0) return;
-        writeIncident(this, incidentStartTs, System.currentTimeMillis(), incidentCycles, incidentHadFix, resolved);
+        writeIncident(this, incidentStartTs, System.currentTimeMillis(), incidentCycles, incidentHadFix, resolved,
+                fix != null ? fix.getLatitude() : Double.NaN, fix != null ? fix.getLongitude() : Double.NaN);
         incidentStartTs = 0;
         incidentCycles = 0;
         incidentWarned = false;
+        lossLat = Double.NaN; lossLng = Double.NaN;
         getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).edit()
-                .remove("open_start").remove("open_cycles").remove("open_had_fix").apply();
+                .remove("open_start").remove("open_cycles").remove("open_had_fix")
+                .remove("open_loss_lat").remove("open_loss_lng").apply();
     }
 
     // Сбой, который остался незакрытым (приложение убила система) — дописываем при следующем запуске
@@ -329,10 +530,16 @@ public class GeoTrackingService extends Service {
         long end = prefs.getLong("last_seen", start);
         writeIncident(this, start, Math.max(end, start), prefs.getInt("open_cycles", 0),
                 prefs.getBoolean("open_had_fix", false), false);
-        prefs.edit().remove("open_start").remove("open_cycles").remove("open_had_fix").apply();
+        prefs.edit().remove("open_start").remove("open_cycles").remove("open_had_fix")
+                .remove("open_loss_lat").remove("open_loss_lng").apply();
     }
 
     private static void writeIncident(Context ctx, long start, long end, int cycles, boolean hadFix, boolean resolved) {
+        writeIncident(ctx, start, end, cycles, hadFix, resolved, Double.NaN, Double.NaN);
+    }
+
+    private static void writeIncident(Context ctx, long start, long end, int cycles, boolean hadFix, boolean resolved,
+                                      double fixLat, double fixLng) {
         SharedPreferences prefs = ctx.getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
         String userKey = prefs.getString("user_key", "");
         String basePath = prefs.getString("incidents_path", "");
@@ -358,6 +565,16 @@ public class GeoTrackingService extends Service {
             // no_fix — телефон вообще не выдал координаты; out_of_zone — координаты были, но вне зоны
             rec.put("kind", hadFix ? "out_of_zone" : "no_fix");
             rec.put("resolved", resolved);
+            // Где пропало гео (последняя хорошая точка) и где вернулось — для карты проблемных зон
+            String lossLatS = prefs.getString("open_loss_lat", null), lossLngS = prefs.getString("open_loss_lng", null);
+            if (lossLatS != null && lossLngS != null) {
+                rec.put("lossLat", Double.parseDouble(lossLatS));
+                rec.put("lossLng", Double.parseDouble(lossLngS));
+            }
+            if (!Double.isNaN(fixLat) && !Double.isNaN(fixLng)) {
+                rec.put("fixLat", fixLat);
+                rec.put("fixLng", fixLng);
+            }
             MainActivity.enqueueSyncItem(ctx, basePath + "/" + date + "/" + userKey + "_" + start, rec.toString());
         } catch (Exception e) {
             e.printStackTrace();
@@ -438,6 +655,8 @@ public class GeoTrackingService extends Service {
         isRunning = false;
         restartInProgress = false;
         handler.removeCallbacksAndMessages(null);
+        if (freshFixCts != null) { freshFixCts.cancel(); freshFixCts = null; }
+        if (fused != null && fusedCallback != null) fused.removeLocationUpdates(fusedCallback);
         if (locationManager != null && locationListener != null) {
             locationManager.removeUpdates(locationListener);
         }

@@ -793,6 +793,22 @@ public class MainActivity extends AppCompatActivity {
                     .apply();
         }
 
+        // Гео+ (по ключу от главного админа): до какого момента действует доступ, 0 — нет доступа
+        @android.webkit.JavascriptInterface
+        public void setGeoPlus(double untilMs) {
+            getSharedPreferences(GeoTrackingService.INCIDENT_PREFS, MODE_PRIVATE).edit()
+                    .putLong("geo_plus_until", (long) untilMs)
+                    .apply();
+        }
+
+        // Проблемные зоны (JSON-массив) — служба по ним напоминает и подсказывает, куда отойти
+        @android.webkit.JavascriptInterface
+        public void setGeoZones(String zonesJson) {
+            getSharedPreferences(GeoTrackingService.INCIDENT_PREFS, MODE_PRIVATE).edit()
+                    .putString("geo_zones", zonesJson == null ? "[]" : zonesJson)
+                    .apply();
+        }
+
         // Сохраняет даты, в которые у пользователя стоит смена (JSON-массив "yyyy-MM-dd").
         // Напоминание об отчёте приходит только в эти дни.
         @android.webkit.JavascriptInterface

@@ -6,6 +6,8 @@
     <meta name="theme-color" content="#f5f7fa">
     <meta name="color-scheme" content="light">
     <title>График Смен</title>
+    <!-- Тема — до первой отрисовки, чтобы не мигало белым -->
+    <script>try { if (localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
 
     <!-- Ссылка на иконки Google -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -124,6 +126,137 @@
         .sp-admin-chat .sp-close { background: #eef2f6; color: #475569; }
         .sp-small-btn { width: auto; margin: 0; padding: 6px 10px; font-size: 12px; border-radius: 8px; background: #eef2f6; color: #475569; flex-shrink: 0; }
         .btn-logout { background: #ffe4e6; color: #e11d48; border: none; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; margin: 0; width: auto; }
+
+        /* === ЛАМПА СО ШНУРКОМ (переключатель темы) === */
+        #mainScreen .top-header { position: relative; }
+        .lamp { position: absolute; top: 100%; right: 10px; width: 64px; height: 96px; z-index: 8; pointer-events: none; }
+        .lamp svg { display: block; overflow: visible; touch-action: none; }
+        .lamp-wire { stroke: #CBD5E1; stroke-width: 1.5; transition: stroke 300ms ease-out; }
+        .lamp-shade { fill: #1E293B; transition: fill 300ms ease-out; }
+        .lamp-bulb { fill: #FCD34D; transition: fill 300ms ease-out; }
+        .lamp-glow { fill: #FDE68A; opacity: .45; filter: blur(8px); transition: opacity 300ms ease-out; }
+        .lamp-cord { fill: none; stroke: #94A3B8; stroke-width: 1.5; stroke-linecap: round; transition: stroke 300ms ease-out; }
+        .lamp-hit { fill: none; stroke: transparent; stroke-width: 22; pointer-events: stroke; cursor: grab; }
+        .lamp-bead { pointer-events: all; cursor: grab; }
+        .lamp-bead rect { fill: #334155; transition: fill 300ms ease-out; }
+        .lamp.grabbing .lamp-hit, .lamp.grabbing .lamp-bead { cursor: grabbing; }
+        .lamp.off .lamp-bulb { fill: #475569; }
+        .lamp.off .lamp-glow { opacity: 0; }
+        .lamp.off .lamp-wire { stroke: #334155; }
+        .lamp.off .lamp-shade { fill: #334155; }
+        .lamp.off .lamp-cord { stroke: #64748B; }
+        .lamp.off .lamp-bead rect { fill: #CBD5E1; }
+        .sr-only-btn { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+        @media (prefers-reduced-motion: reduce) { .lamp * { transition: none; } }
+
+        /* === ТЁМНАЯ ТЕМА (лампа выключена) === */
+        html[data-theme="dark"] { color-scheme: dark; --bg: #0B1220; --text: #E5E7EB; }
+        html[data-theme="dark"] body { background: #0B1220; color: #E5E7EB; }
+        html[data-theme="dark"] .card, html[data-theme="dark"] .top-header, html[data-theme="dark"] .vacation-container,
+        html[data-theme="dark"] .vacation-item, html[data-theme="dark"] .schedule-day, html[data-theme="dark"] .modal-content,
+        html[data-theme="dark"] .sp-sheet, html[data-theme="dark"] .sp-foot, html[data-theme="dark"] .sp-thread,
+        html[data-theme="dark"] .ms-sheet, html[data-theme="dark"] .gp-zone, html[data-theme="dark"] .gp-keyrow,
+        html[data-theme="dark"] .geo-row, html[data-theme="dark"] .report-item {
+            background: #111A2E !important; color: #E5E7EB; border-color: #1F2A44 !important; box-shadow: 0 1px 0 rgba(255,255,255,.02), 0 6px 18px rgba(0,0,0,.35); }
+        html[data-theme="dark"] [style*="background: white"], html[data-theme="dark"] [style*="background:white"],
+        html[data-theme="dark"] [style*="background: #fff;"], html[data-theme="dark"] [style*="background:#fff;"],
+        html[data-theme="dark"] [style*="background: #ffffff"], html[data-theme="dark"] [style*="background: #fff "] { background: #111A2E !important; }
+        html[data-theme="dark"] [style*="background: #f8f9fa"], html[data-theme="dark"] [style*="background:#f8f9fa"],
+        html[data-theme="dark"] [style*="background: #fafafa"], html[data-theme="dark"] [style*="background: #f9f9f9"] { background: #16213A !important; }
+        html[data-theme="dark"] [style*="color: #333"], html[data-theme="dark"] [style*="color:#333"], html[data-theme="dark"] [style*="color: #222"],
+        html[data-theme="dark"] [style*="color:#222"], html[data-theme="dark"] [style*="color: #444"], html[data-theme="dark"] [style*="color: #555"] { color: #E5E7EB !important; }
+        html[data-theme="dark"] [style*="color: #666"], html[data-theme="dark"] [style*="color:#666"], html[data-theme="dark"] [style*="color: #888"],
+        html[data-theme="dark"] [style*="color:#888"], html[data-theme="dark"] [style*="color: #999"] { color: #94A3B8 !important; }
+        html[data-theme="dark"] [style*="border: 1px solid #e0e0e0"], html[data-theme="dark"] [style*="border: 1px solid #ced4da"],
+        html[data-theme="dark"] [style*="border:1px solid #ced4da"], html[data-theme="dark"] [style*="border: 1px solid #eee"] { border-color: #1F2A44 !important; }
+        html[data-theme="dark"] [style*="border-bottom: 2px solid #f0f0f0"], html[data-theme="dark"] [style*="border-bottom: 2px solid #e0e0e0"] { border-bottom-color: #1F2A44 !important; }
+        html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea { background: #0F172A !important; color: #E5E7EB; border-color: #334155 !important; }
+        html[data-theme="dark"] .tab.inactive, html[data-theme="dark"] .mode-selector label:not([class*="active"]), html[data-theme="dark"] .toggle-btn:not([class*="active"]),
+        html[data-theme="dark"] .btn-secondary, html[data-theme="dark"] .geo-datebtn, html[data-theme="dark"] .btn-nav:not(.btn-danger):not([style*="background"]) { background: #1E293B !important; color: #CBD5E1 !important; }
+        html[data-theme="dark"] .mode-selector label.active-shift { background: #172554 !important; color: #93C5FD !important; border-color: #2563EB !important; }
+        html[data-theme="dark"] .mode-selector label.active-vacation { background: #2A1B08 !important; color: #FDBA74 !important; border-color: #EA580C !important; }
+        html[data-theme="dark"] .btn-support { background: #172554; color: #93C5FD; }
+        html[data-theme="dark"] .btn-support .unread-dot { border-color: #111A2E; }
+        html[data-theme="dark"] .btn-logout { background: #3B0D0D; color: #FCA5A5; }
+        html[data-theme="dark"] .day { background: #111A2E; border-color: #1F2A44; color: #E5E7EB; }
+        html[data-theme="dark"] .day.empty { background: transparent; }
+        html[data-theme="dark"] .day.vacation { background: #2A1B08; }
+        html[data-theme="dark"] .day.profitable { background: #0D2A17; }
+        html[data-theme="dark"] .slot-dot { background: #334155; }
+        html[data-theme="dark"] .worker-badge { background: #172554; color: #93C5FD; }
+        html[data-theme="dark"] .worker-badge.empty-slot { background: #1E293B; color: #64748B; border-color: #334155; }
+        html[data-theme="dark"] .worker-badge.conflict { background: #3B0D0D; color: #FCA5A5; }
+        html[data-theme="dark"] .vacation-name, html[data-theme="dark"] .schedule-date, html[data-theme="dark"] .calendar-header { color: #E5E7EB; }
+        html[data-theme="dark"] .sp-body { background: #0B1220; }
+        html[data-theme="dark"] .sp-msg.theirs { background: #1E293B; color: #E5E7EB; }
+        html[data-theme="dark"] .sp-input { background: #0F172A; color: #E5E7EB; border-color: #334155; }
+        html[data-theme="dark"] .bn { background: rgba(11,18,32,.94); border-top-color: #1F2A44; box-shadow: 0 -4px 16px rgba(0,0,0,.4); }
+        html[data-theme="dark"] .bn-item { color: #94A3B8; }
+        html[data-theme="dark"] .bn-item.active { color: #93C5FD; }
+        html[data-theme="dark"] .bn-item.active svg { background: #1E3A8A; }
+        html[data-theme="dark"] .ms-title { color: #E5E7EB; }
+        html[data-theme="dark"] .ms-grip { background: #334155; }
+        html[data-theme="dark"] .ms-tile { background: #16213A; border-color: #1F2A44; color: #E5E7EB; }
+        html[data-theme="dark"] .ms-tile i { background: #0F172A; color: #93C5FD; }
+        html[data-theme="dark"] .gp-card, html[data-theme="dark"] #geoKeysPanel {
+            --gp-text: #E5E7EB; --gp-muted: #CBD5E1; --gp-subtle: #94A3B8; --gp-border: #1F2A44; --gp-surface: #16213A;
+            --gp-primary-soft: #172554; --gp-success-soft: #052E2B; --gp-success: #6EE7B7; --gp-danger-soft: #3B0D0D; --gp-danger: #FCA5A5;
+            --gp-warn-soft: #3A2A05; --gp-warn: #FCD34D; }
+        html[data-theme="dark"] .gp-fab { background: #1E293B; color: #E5E7EB; }
+        html[data-theme="dark"] .gp-seg { background: #0F172A; }
+        html[data-theme="dark"] .gp-seg button[aria-pressed="true"] { background: #1E293B; }
+        html[data-theme="dark"] .gp-legend { background: rgba(15,23,42,.9); }
+        html[data-theme="dark"] .gp-teaser-rows { background: #111A2E; }
+        html[data-theme="dark"] .geo-stat { background: #2A1A0E; border-color: #4A2A12; }
+        html[data-theme="dark"] .geo-stat b, html[data-theme="dark"] .geo-stat span { color: #FDBA74; }
+        html[data-theme="dark"] .geo-user { background: #1A1420; border-color: #3B1F2B; }
+        html[data-theme="dark"] .geo-row-time, html[data-theme="dark"] .geo-top-name, html[data-theme="dark"] .geo-toplabel { color: #E5E7EB; }
+        html[data-theme="dark"] .geo-timeline { background: #12301F; }
+        html[data-theme="dark"] .geo-top-row { background: #16213A; }
+        html[data-theme="dark"] .geo-top-row.podium { background: #2A2210; }
+        html[data-theme="dark"] .geo-seg { background: #0F172A; }
+        html[data-theme="dark"] .geo-seg-btn.active { background: #1E293B; color: #E5E7EB; }
+        /* Карта в тёмной теме — инвертируем только подложку, метки остаются цветными */
+        html[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9); }
+        html[data-theme="dark"] .leaflet-container { background: #0B1220; }
+        html[data-theme="dark"] .gp-map .leaflet-control-attribution { background: rgba(15,23,42,.8); color: #94A3B8; }
+        /* Плавная смена темы — только цвета */
+        body, .card, .top-header, .bn { transition: background-color 300ms ease-out, color 300ms ease-out, border-color 300ms ease-out; }
+
+        /* === НИЖНЯЯ ПАНЕЛЬ И ШТОРКА «ЕЩЁ» (ui-ux-pro-max: bottom nav ≤ 5, цели ≥ 48dp, safe area) === */
+        #mainScreen > .tabs { display: none; } /* старые кнопки остаются как источник: кому какой раздел виден */
+        #mainScreen.active { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+        .bn { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1500; display: none; grid-template-columns: repeat(5, 1fr);
+              padding: 6px max(8px, env(safe-area-inset-left, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-right, 0px));
+              background: rgba(255,255,255,.96); border-top: 1px solid #E2E8F0; box-shadow: 0 -4px 16px rgba(15,23,42,.06);
+              -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px); }
+        #mainScreen.active ~ .bn, #mainScreen.active .bn { display: grid; }
+        .bn-item { margin: 0; padding: 6px 2px 4px; min-height: 56px; width: auto; background: transparent; color: #64748B; border-radius: 14px;
+                   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 700; line-height: 1.1;
+                   transition: color 150ms ease-out, transform 120ms cubic-bezier(0.23, 1, 0.32, 1); }
+        .bn-item svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; padding: 2px 14px; border-radius: 999px; box-sizing: content-box; transition: background-color 180ms ease-out; }
+        .bn-item:active { transform: scale(0.94); }
+        .bn-item.active { color: #2563EB; }
+        .bn-item.active svg { background: #DBEAFE; }
+        .bn-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .ms-backdrop { position: fixed; inset: 0; z-index: 1600; background: rgba(15,23,42,.45); opacity: 0; pointer-events: none; transition: opacity 220ms ease-out; }
+        .ms-backdrop.open { opacity: 1; pointer-events: auto; }
+        .ms-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1700; max-height: 80dvh; overflow-y: auto; overscroll-behavior: contain;
+                    background: #fff; border-radius: 24px 24px 0 0; padding: 8px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+                    transform: translateY(100%); transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1); box-shadow: 0 -10px 40px rgba(15,23,42,.18); }
+        .ms-sheet.open { transform: none; }
+        .ms-grip { width: 40px; height: 5px; border-radius: 3px; background: #CBD5E1; margin: 4px auto 12px; }
+        .ms-title { font-size: 18px; font-weight: 800; color: #0F172A; margin-bottom: 4px; }
+        .ms-group { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #64748B; margin: 16px 0 8px; }
+        .ms-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .ms-tile { margin: 0; width: auto; min-height: 88px; padding: 12px 6px; border-radius: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; color: #0F172A;
+                   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 700; line-height: 1.2; text-align: center;
+                   transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease-out; }
+        .ms-tile:active { transform: scale(0.96); background: #F1F5F9; }
+        .ms-tile.active { border-color: #93C5FD; background: #EFF6FF; color: #1D4ED8; }
+        .ms-tile i { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,.08); color: #2563EB; }
+        .ms-tile svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+        @media (prefers-reduced-motion: reduce) { .ms-sheet, .ms-backdrop { transition-duration: 1ms; } }
 
         /* === ВКЛАДКИ НАВИГАЦИИ === */
         .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; scrollbar-width: none; }
@@ -381,6 +514,137 @@
         @keyframes geoTopIn { from { opacity: 0; transform: translateY(6px); } }
         @media (prefers-reduced-motion: reduce) { .geo-top-row { animation: none; } }
 
+        /* === ГЕО+: дизайн по ui-ux-pro-max — минимализм, синий трекинг + оранжевый акцент, SVG вместо эмодзи, сетка 8dp === */
+        .gp-card, #geoKeysPanel {
+            --gp-primary: #2563EB; --gp-primary-soft: #EFF6FF; --gp-accent: #EA580C;
+            --gp-danger: #DC2626; --gp-danger-soft: #FEF2F2; --gp-success: #047857; --gp-success-soft: #ECFDF5;
+            --gp-warn: #B45309; --gp-warn-soft: #FFFBEB;
+            --gp-text: #0F172A; --gp-muted: #475569; --gp-subtle: #64748B; --gp-border: #E2E8F0; --gp-surface: #F8FAFC;
+            --gp-ease: cubic-bezier(0.23, 1, 0.32, 1);
+            color: var(--gp-text);
+        }
+        .gp-card svg, #geoKeysPanel svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .gp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .gp-head-ico { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: var(--gp-primary-soft); color: var(--gp-primary); }
+        .gp-head-ico svg { width: 22px; height: 22px; }
+        .gp-head-text { flex: 1; min-width: 0; }
+        .gp-head-text h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.25; color: var(--gp-text); }
+        .gp-head-text p { margin: 2px 0 0; font-size: 13px; color: var(--gp-subtle); }
+        .gp-pill { flex-shrink: 0; font-size: 12px; font-weight: 800; letter-spacing: .3px; color: #fff; background: var(--gp-primary); padding: 4px 10px; border-radius: 999px; }
+        .gp-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--gp-success-soft); color: var(--gp-success); font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+        .gp-status svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .gp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .gp-stat { padding: 10px 8px; border-radius: 12px; background: var(--gp-surface); border: 1px solid var(--gp-border); text-align: center; }
+        .gp-stat b { display: block; font-size: 20px; font-weight: 800; color: var(--gp-text); font-variant-numeric: tabular-nums; line-height: 1.2; }
+        .gp-stat span { font-size: 12px; color: var(--gp-subtle); }
+        .gp-map-box { position: relative; height: 320px; margin: 0 -4px; border-radius: 16px; overflow: hidden; background: #E5E7EB; border: 1px solid var(--gp-border); isolation: isolate; }
+        .gp-map { position: absolute; inset: 0; }
+        .gp-map-ctrls { position: absolute; top: 12px; right: 12px; z-index: 1000; display: grid; gap: 8px; }
+        .gp-fab { width: 48px; height: 48px; margin: 0; padding: 0; border-radius: 14px; background: #fff; color: var(--gp-text); box-shadow: 0 2px 10px rgba(15,23,42,.16); display: grid; place-items: center; transition: transform 120ms var(--gp-ease), background-color 150ms ease-out; }
+        .gp-fab:active { transform: scale(0.94); background: var(--gp-surface); }
+        .gp-fab svg { width: 22px; height: 22px; }
+        .gp-locate { position: absolute; right: 12px; bottom: 44px; z-index: 1000; border-radius: 50%; color: var(--gp-primary); }
+        .gp-locate .gp-fill { fill: currentColor; stroke: none; }
+        .gp-locate.busy svg { animation: gpSpin 900ms linear infinite; }
+        @keyframes gpSpin { to { transform: rotate(360deg); } }
+        .gp-legend { position: absolute; left: 8px; bottom: 8px; z-index: 1000; display: flex; gap: 10px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.94); box-shadow: 0 1px 6px rgba(15,23,42,.12); font-size: 12px; font-weight: 600; color: var(--gp-muted); }
+        .gp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+        .gp-dot.red { background: var(--gp-danger); } .gp-dot.green { background: #10B981; } .gp-dot.blue { background: var(--gp-primary); }
+        .gp-map .leaflet-control-attribution { font-size: 10px; background: rgba(255,255,255,.8); padding: 0 6px; border-radius: 6px 0 0 0; }
+        .gp-map .gp-flag { width: 12px; height: 8px; vertical-align: -1px; box-shadow: 0 0 0 .5px rgba(0,0,0,.25); stroke: none; }
+        .gp-zones { display: grid; gap: 8px; margin-top: 16px; }
+        .gp-zone { display: grid; grid-template-columns: 36px 1fr 20px; gap: 0 12px; align-items: center; padding: 12px; border-radius: 14px; background: #fff; border: 1px solid var(--gp-border); text-align: left; width: 100%; margin: 0; color: var(--gp-text); font-weight: 400; transition: transform 120ms var(--gp-ease), background-color 150ms ease-out; }
+        .gp-zone:active { transform: scale(0.985); background: var(--gp-surface); }
+        .gp-zone-num { width: 36px; height: 36px; border-radius: 50%; background: var(--gp-danger-soft); color: var(--gp-danger); font-weight: 800; font-size: 15px; display: grid; place-items: center; grid-row: span 2; }
+        .gp-zone-title { font-size: 15px; font-weight: 700; line-height: 1.3; }
+        .gp-zone-meta { font-size: 13px; color: var(--gp-muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .gp-zone-meta svg { width: 14px; height: 14px; color: var(--gp-subtle); }
+        .gp-zone-chev { grid-row: span 2; color: #94A3B8; }
+        .gp-zone-chev svg { width: 20px; height: 20px; }
+        .gp-zone-hint { grid-column: 2 / 3; margin-top: 8px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: var(--gp-success-soft); color: var(--gp-success); font-size: 13px; font-weight: 700; width: fit-content; }
+        .gp-zone-hint svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .gp-empty { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 14px; background: var(--gp-surface); border: 1px dashed var(--gp-border); font-size: 13px; color: var(--gp-muted); line-height: 1.5; }
+        .gp-empty svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--gp-success); margin-top: 1px; }
+        /* Пейвол */
+        .gp-paywall-hero { text-align: center; padding: 8px 0 4px; }
+        .gp-paywall-ico { width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(160deg, #EFF6FF, #DBEAFE); color: var(--gp-primary); }
+        .gp-paywall-ico svg { width: 30px; height: 30px; }
+        .gp-paywall-hero h4 { margin: 0; font-size: 20px; font-weight: 800; }
+        .gp-paywall-hero p { margin: 6px 0 0; font-size: 14px; color: var(--gp-muted); line-height: 1.5; }
+        .gp-expired { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-top: 16px; border-radius: 12px; background: var(--gp-warn-soft); color: var(--gp-warn); font-size: 13px; font-weight: 600; }
+        .gp-expired svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .gp-features { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 12px; }
+        .gp-features li { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; font-size: 14px; color: var(--gp-text); line-height: 1.45; }
+        .gp-f-ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--gp-surface); color: var(--gp-primary); border: 1px solid var(--gp-border); }
+        .gp-f-ico svg { width: 18px; height: 18px; }
+        .gp-features li b { display: block; font-size: 14px; }
+        .gp-features li small { color: var(--gp-subtle); font-size: 13px; }
+        .gp-field { display: grid; gap: 6px; margin-top: 8px; }
+        .gp-field label { font-size: 13px; font-weight: 700; color: var(--gp-text); }
+        .gp-key-input { margin: 0 !important; height: 52px; border: 1.5px solid var(--gp-border) !important; border-radius: 12px !important; background: var(--gp-surface); text-transform: uppercase; letter-spacing: 3px; text-align: center; font-weight: 800; font-size: 18px !important; font-family: ui-monospace, "Roboto Mono", Menlo, Consolas, monospace; color: var(--gp-text); transition: border-color 150ms ease-out, background-color 150ms ease-out; }
+        .gp-key-input:focus { outline: none; border-color: var(--gp-primary) !important; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .gp-key-input.invalid { border-color: var(--gp-danger) !important; background: var(--gp-danger-soft); }
+        .gp-help { font-size: 12px; color: var(--gp-subtle); }
+        .gp-error { font-size: 13px; color: var(--gp-danger); font-weight: 600; display: none; }
+        .gp-error.show { display: block; }
+        .gp-btn { height: 52px; margin: 12px 0 0; padding: 0 16px; border-radius: 12px; background: var(--gp-primary); color: #fff; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: transform 120ms var(--gp-ease), opacity 150ms ease-out; }
+        .gp-btn:active { transform: scale(0.98); }
+        .gp-btn[disabled] { opacity: .55; }
+        .gp-btn svg { width: 20px; height: 20px; }
+        /* Ключи (главный админ) */
+        .gp-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; background: #F1F5F9; border-radius: 12px; }
+        .gp-seg button { margin: 0; height: 44px; padding: 0; border-radius: 9px; background: transparent; color: var(--gp-muted); font-size: 14px; font-weight: 700; transition: background-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out; }
+        .gp-seg button[aria-pressed="true"] { background: #fff; color: var(--gp-text); box-shadow: 0 1px 4px rgba(15,23,42,.12); }
+        .gp-ticket { margin-top: 16px; display: grid; grid-template-columns: 1fr 48px; align-items: center; gap: 8px; padding: 12px 12px 12px 16px; border-radius: 14px; background: var(--gp-primary-soft); border: 1.5px dashed #93C5FD; animation: gpTicketIn 260ms var(--gp-ease) both; }
+        .gp-ticket code { font-family: ui-monospace, "Roboto Mono", Menlo, Consolas, monospace; font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #1E3A8A; user-select: all; -webkit-user-select: all; }
+        .gp-ticket small { grid-column: 1 / -1; font-size: 12px; color: var(--gp-muted); }
+        .gp-ticket .gp-fab { box-shadow: none; border: 1px solid #BFDBFE; color: var(--gp-primary); }
+        @keyframes gpTicketIn { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+        .gp-sub { margin: 24px 0 8px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--gp-subtle); }
+        .gp-keyrow { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 12px; border-radius: 14px; border: 1px solid var(--gp-border); background: #fff; }
+        .gp-keyrow code { font-family: ui-monospace, "Roboto Mono", Menlo, Consolas, monospace; font-weight: 800; letter-spacing: 1px; font-size: 15px; color: var(--gp-text); }
+        .gp-keyrow-sub { font-size: 13px; color: var(--gp-muted); }
+        .gp-chip { justify-self: end; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+        .gp-chip.new { background: #F1F5F9; color: var(--gp-muted); }
+        .gp-chip.on { background: var(--gp-success-soft); color: var(--gp-success); }
+        .gp-chip.exp { background: var(--gp-warn-soft); color: var(--gp-warn); }
+        .gp-chip.off { background: var(--gp-danger-soft); color: var(--gp-danger); }
+        .gp-textbtn { justify-self: end; margin: 0; width: auto; min-height: 44px; padding: 0 12px; border-radius: 10px; background: transparent; color: var(--gp-danger); font-size: 14px; font-weight: 700; }
+        .gp-textbtn:active { background: var(--gp-danger-soft); }
+        /* Маркеры на карте */
+        .gp-pin { position: relative; width: 28px; height: 28px; }
+        .gp-pin::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgba(220,38,38,.3); animation: gpPulse 2s cubic-bezier(0.23, 1, 0.32, 1) infinite; }
+        .gp-pin b { position: absolute; inset: 3px; border-radius: 50%; background: #DC2626; color: #fff; font: 800 12px/22px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.3); }
+        .gp-fix b { background: #10B981; inset: 7px; } .gp-fix::before { background: rgba(16,185,129,.28); }
+        .gp-me b { background: #2563EB; inset: 7px; } .gp-me::before { background: rgba(37,99,235,.28); }
+        @keyframes gpPulse { from { transform: scale(.55); opacity: 1; } to { transform: scale(1.9); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .gp-pin::before { animation: none; opacity: .45; } .gp-locate.busy svg, .gp-ticket { animation: none; } }
+        .leaflet-container { font-family: inherit; }
+        /* Поля и отчёт ИИ-разбора */
+        .gp-input { margin: 0 !important; height: 48px; border: 1.5px solid var(--gp-border) !important; border-radius: 12px !important; background: var(--gp-surface); font-size: 16px !important; color: var(--gp-text); padding: 0 14px !important; transition: border-color 150ms ease-out; }
+        .gp-input:focus { outline: none; border-color: var(--gp-primary) !important; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .gp-ai-report { margin-top: 16px; }
+        .gp-ai-meta { font-size: 12px; color: var(--gp-subtle); margin-bottom: 8px; }
+        .gp-ai-text { padding: 14px 16px; border-radius: 14px; background: var(--gp-surface); border: 1px solid var(--gp-border); font-size: 14px; line-height: 1.55; color: var(--gp-text); }
+        .gp-ai-text h4 { margin: 14px 0 6px; font-size: 15px; } .gp-ai-text h4:first-child { margin-top: 0; }
+        .gp-ai-text p { margin: 6px 0; } .gp-ai-text ul { margin: 6px 0; padding-left: 20px; } .gp-ai-text li { margin: 3px 0; }
+        /* Размытая витрина Гео+ за пейволом */
+        .gp-teaser { position: relative; margin: 16px 0 4px; border-radius: 16px; overflow: hidden; border: 1px solid var(--gp-border); }
+        .gp-teaser-blur { filter: blur(6px) saturate(1.1); transform: scale(1.04); pointer-events: none; user-select: none; -webkit-user-select: none; }
+        .gp-teaser-map { height: 150px; background:
+            linear-gradient(115deg, transparent 46%, #FCD34D 46%, #FCD34D 49%, transparent 49%),
+            linear-gradient(20deg, transparent 58%, #fff 58%, #fff 61%, transparent 61%),
+            linear-gradient(160deg, transparent 30%, #fff 30%, #fff 32%, transparent 32%),
+            radial-gradient(circle at 30% 60%, rgba(220,38,38,.55) 0 14px, rgba(220,38,38,.15) 15px 34px, transparent 35px),
+            radial-gradient(circle at 68% 35%, rgba(220,38,38,.55) 0 12px, rgba(220,38,38,.15) 13px 28px, transparent 29px),
+            radial-gradient(circle at 76% 52%, #10B981 0 8px, transparent 9px),
+            linear-gradient(#E8F0E3, #DDE8D5); }
+        .gp-teaser-rows { padding: 10px; display: grid; gap: 6px; background: #fff; }
+        .gp-teaser-rows div { height: 34px; border-radius: 10px; background: linear-gradient(90deg, #FEE2E2 0 34px, #F1F5F9 34px); }
+        .gp-teaser-lock { position: absolute; inset: 0; display: grid; place-items: center; }
+        .gp-teaser-lock span { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(15,23,42,.82); color: #fff; font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(15,23,42,.25); }
+        .gp-teaser-lock svg { width: 16px; height: 16px; }
+
         /* === АНИМИРОВАННОЕ УВЕДОМЛЕНИЕ (ТОСТ) === */
 
         /* === НОВЫЕ УВЕДОМЛЕНИЯ СВЕРХУ СПРАВА === */
@@ -569,9 +833,33 @@
         <button id="tabEmployees" class="tab inactive" onclick="switchTab('employees')" style="display:none;">Сотрудники</button>
         <button id="tabReports" class="tab inactive" onclick="switchTab('reports')" style="display:none;">Отчеты</button>
         <button id="tabAnalytics" class="tab inactive" onclick="switchTab('analytics')" style="display:none;">Аналитика 🤖</button>
-        <button id="tabAiAdmin" class="tab inactive" onclick="switchTab('aiAdmin')" style="display:none;">ИИ-Админ 🤖</button>
         <button id="tabMyGeo" class="tab inactive" onclick="switchTab('myGeo')" style="display:none;">Мои сбои 📍</button>
         <button id="tabGeoTop" class="tab inactive" onclick="switchTab('geoTop')" style="display:none;">Топ сбоев 🏆</button>
+    </div>
+
+    <!-- Нижняя панель: главные разделы под большим пальцем, остальное — в «Ещё» -->
+    <nav class="bn" id="bottomNav" aria-label="Разделы">
+        <button class="bn-item active" data-tab="personal" onclick="switchTab('personal')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4M8.5 14.5l2.3 2.3 4.7-4.6"/></svg><span>Заявки</span>
+        </button>
+        <button class="bn-item" data-tab="general" onclick="switchTab('general')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M3.5 14.8h17M9.5 9.5V20"/></svg><span>График</span>
+        </button>
+        <button class="bn-item" data-tab="myGeo" onclick="switchTab('myGeo')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="9.5" r="2.6"/></svg><span>Мои сбои</span>
+        </button>
+        <button class="bn-item" data-tab="geoTop" onclick="switchTab('geoTop')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.9M17 6h2.5a2.5 2.5 0 0 1-2.6 3.9"/></svg><span>Топ сбоев</span>
+        </button>
+        <button class="bn-item" data-tab="more" onclick="openMoreSheet()" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>Ещё</span>
+        </button>
+    </nav>
+    <div class="ms-backdrop" id="moreSheetBackdrop" onclick="closeMoreSheet()"></div>
+    <div class="ms-sheet" id="moreSheet" role="dialog" aria-modal="true" aria-labelledby="moreSheetTitle" aria-hidden="true">
+        <div class="ms-grip" aria-hidden="true"></div>
+        <div class="ms-title" id="moreSheetTitle">Все разделы</div>
+        <div id="moreSheetBody"></div>
     </div>
 
     <div id="personalTab">
@@ -690,6 +978,32 @@
             </div>
             <div id="myGeoContent" style="margin-top: 14px;"></div>
         </div>
+        <section class="card gp-card" id="geoMapCard" aria-labelledby="gpTitle">
+            <header class="gp-head">
+                <span class="gp-head-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
+                <div class="gp-head-text">
+                    <h3 id="gpTitle">Проблемные зоны</h3>
+                    <p id="gpSubtitle">Где у курьеров пропадает гео</p>
+                </div>
+                <span class="gp-pill">Гео+</span>
+            </header>
+            <div id="geoPlusStatus"></div>
+            <div id="geoMapWrap" style="display:none;">
+                <div class="gp-stats" id="geoZoneStats"></div>
+                <div class="gp-map-box">
+                    <div id="geoMap" class="gp-map"></div>
+                    <div class="gp-map-ctrls">
+                        <button class="gp-fab" onclick="zoomGeoMap(1)" aria-label="Приблизить"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <button class="gp-fab" onclick="zoomGeoMap(-1)" aria-label="Отдалить"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+                    </div>
+                    <button class="gp-fab gp-locate" onclick="locateMeOnGeoMap()" aria-label="Где я сейчас"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" class="gp-fill"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>
+                    <div class="gp-legend" aria-hidden="true">
+                        <span><i class="gp-dot red"></i>Сбой</span><span><i class="gp-dot green"></i>Гео вернулось</span><span><i class="gp-dot blue"></i>Вы</span>
+                    </div>
+                </div>
+                <div id="geoZonesList" class="gp-zones"></div>
+            </div>
+        </section>
         <div class="card" id="myGeoTopCard" style="display:none;"></div>
     </div>
 
@@ -713,6 +1027,7 @@
 
     <div id="analyticsTab" style="display: none;">
         <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+            <div id="geoAiPanelSlot"></div>
             <div class="card ai-card" style="background: #faf5ff; border: 1px solid #e9d8fd; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px;">
                 <h3 style="margin-top:0; color: #6b46c1; border-bottom: 2px solid #e9d8fd; padding-bottom: 12px;">ИИ-Анализ статистики 🤖</h3>
                 <p style="font-size: 14px; color: #553c9a; margin-top:0;">Бот рассчитает нагрузку на основе предыдущих отчетов и найдет самые прибыльные дни для курьеров.</p>
@@ -733,17 +1048,6 @@
         </div>
     </div>
 
-    <div id="aiAdminTab" style="display: none;">
-        <div class="card ai-card" style="background:#faf5ff; border:1px solid #e9d8fd; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 12px; padding: 24px;">
-            <h3 style="margin-top:0; color:#6b46c1; border-bottom: 2px solid #e9d8fd; padding-bottom: 12px;">ИИ-Администрирование 🤖</h3>
-            <p style="font-size:13px; color:#666;">Пишите команды на естественном языке, например: «Переименуй Иван_Петров в Никита Новодский».</p>
-            <div id="adminAiLog" style="display:flex; flex-direction:column; max-height:320px; overflow-y:auto; margin-bottom:12px; padding:8px; background:#fff; border-radius:8px; border:1px solid #eee;"></div>
-            <div style="display:flex; gap:8px;">
-                <input type="text" id="adminAiInput" placeholder="Например: переименуй ... в ..." style="flex:1; margin:0;" onkeypress="if(event.key==='Enter') sendAdminAICommand()">
-                <button class="btn-ai" style="width:auto; padding:14px 20px; margin:0; background:#805ad5;" onclick="sendAdminAICommand()">➤</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -1402,7 +1706,7 @@
     let rainyDays = [];
     let profitableDays = {};
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-    const APP_VERSION = 18
+    const APP_VERSION = 19
     ; // Обновлена версия для вызова модалки
         function saveOfflineCache(key, data) {
         try {
@@ -1768,7 +2072,31 @@
                         </div>
                         <h4 style="margin: 20px 0 10px;">Действующие блокировки</h4>
                         <div id="activeShiftBlocks" style="display: flex; flex-direction: column; gap: 8px;"><div style="color:#888;">Загрузка...</div></div>
-                    </div>`);
+                    </div>
+                    <section class="card" id="geoKeysPanel" aria-labelledby="gpKeysTitle">
+                        <header class="gp-head">
+                            <span class="gp-head-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 20 3M16 7l3 3M14 9l2 2"/></svg></span>
+                            <div class="gp-head-text">
+                                <h3 id="gpKeysTitle">Ключи Гео+</h3>
+                                <p>Курьер вводит ключ во вкладке «Мои сбои»</p>
+                            </div>
+                        </header>
+                        <div class="gp-field" style="margin-top:0;">
+                            <label id="gpTermLabel">Срок доступа (считается с момента ввода)</label>
+                            <div class="gp-seg" role="group" aria-labelledby="gpTermLabel" id="geoKeyTerm">
+                                <button type="button" data-days="7" aria-pressed="false" onclick="setGeoKeyTerm(7)">7 дн.</button>
+                                <button type="button" data-days="30" aria-pressed="true" onclick="setGeoKeyTerm(30)">30 дн.</button>
+                                <button type="button" data-days="90" aria-pressed="false" onclick="setGeoKeyTerm(90)">90 дн.</button>
+                                <button type="button" data-days="365" aria-pressed="false" onclick="setGeoKeyTerm(365)">1 год</button>
+                            </div>
+                        </div>
+                        <button class="gp-btn" id="geoKeyCreateBtn" onclick="createGeoPlusKey()">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Создать ключ
+                        </button>
+                        <div id="geoKeyOut"></div>
+                        <div class="gp-sub">Выданные ключи</div>
+                        <div id="geoKeysList" style="display: grid; gap: 8px;"><div class="gp-help">Загрузка…</div></div>
+                    </section>`);
 
                 window.switchSuperadminPolygon = function(newPoly) {
                     if (newPoly === currentUser.polygon) return;
@@ -1787,11 +2115,9 @@
         if (isAdmin) {
             document.getElementById('tabEmployees').style.display = 'block';
             document.getElementById('tabReports').style.display = 'block';
-            // Главному админу «Аналитика» и «ИИ-Админ» не нужны — оставляем их только админам полигонов
-            let showAiTabs = role !== 'superadmin';
-            document.getElementById('tabAnalytics').style.display = showAiTabs ? 'block' : 'none';
-            document.getElementById('tabAiAdmin').style.display = showAiTabs ? 'block' : 'none';
-            document.getElementById('tabGeoTop').style.display = 'block';
+            // «ИИ-Админ» убран совсем; «Аналитика» — у всех админов, у главного ещё и ИИ-разбор сбоев
+            document.getElementById('tabAnalytics').style.display = 'block';
+            if (role === 'superadmin') initGeoAiPanel();
 
             if (role === 'superadmin') {
                 if (!document.getElementById('tabSupportAdmin')) {
@@ -1851,6 +2177,7 @@
             globalUsersData = data;
             if (isAdmin) loadEmployees();
             if (role === 'superadmin') renderBlockUserSelect();
+            updateGeoPlusFromUsers();
             resolveFifthShiftQueue();
         });
 
@@ -1886,13 +2213,17 @@
         }
         // «Мои сбои» — у всех, включая админов: только свои сбои и опубликованный топ
         document.getElementById('tabMyGeo').style.display = 'block';
+        document.getElementById('tabGeoTop').style.display = 'block'; // «Топ сбоев» — у всех, публикуют только админы
+        updateBottomNav(currentTabName);
         let md = document.getElementById('myGeoDate');
         if (md && !md.value) md.value = getTodayDateStr();
         attachListener(getPolyPath(poly, 'geo_tops/latest'), 'value', snap => {
             publishedGeoTop = snap.val();
             renderPublishedGeoTop();
         });
-        if (role === 'superadmin') listenAllShiftBlocks();
+        if (role === 'superadmin') { listenAllShiftBlocks(); listenGeoPlusKeys(); }
+        // Гео+: у админов всегда, у остальных — по ключу (статус приходит вместе со списком сотрудников)
+        onGeoPlusChanged();
     }
 
     function checkOnboardingAndChangelog(role) {
@@ -1904,11 +2235,10 @@
         } else if (lastSeenVersion < APP_VERSION) {
             let cl = document.getElementById('changelogContent');
             cl.innerHTML = `<ul>
-                <li><b>📍 Мои сбои:</b> Новая вкладка — видно, когда и сколько телефон был вне зоны за день (только ваши сбои).</li>
-                <li><b>🏆 Топ сбоев:</b> Администраторы публикуют рейтинг сбоев за день или неделю — он появится во вкладке «Мои сбои».</li>
-                <li><b>📱 Как настоящее приложение:</b> Кнопки реагируют сразу, без вспышек и выделения текста; экран не «тянется» и не приближается при вводе.</li>
-                <li><b>🔒 Блокировка:</b> Новая анимация — кнопку «Я на линии» обвивает цепь с замком, открыть можно ключом.</li>
-                <li><b>🏁 20:10:</b> В 20:10 приложение само выводит с линии, сбои после этого не записываются.</li>
+                <li><b>🗺️ Гео+:</b> Карта мест, где пропадает гео, напоминания и подсказка, куда отойти. Включается ключом от главного администратора.</li>
+                <li><b>📡 Геолокация:</b> Местоположение теперь определяется так же, как в Google Картах.</li>
+                <li><b>🧭 Новое меню:</b> Главные разделы внизу экрана — «Заявки», «График», «Мои сбои», «Топ сбоев», остальное в «Ещё».</li>
+                <li><b>💡 Тёмная тема:</b> Потяните шнурок лампы под шапкой — свет погаснет. Потяните ещё раз — включится.</li>
             </ul>`;
             // Здесь только изменения ЭТОЙ версии — старые пункты удаляем при каждом выпуске
             document.getElementById('changelogModal').style.display = 'flex';
@@ -2246,9 +2576,82 @@
         if (tab === 'vacations') {
             renderAllVacations();
         }
-        if (tab === 'myGeo') loadMyGeoIncidents();
+        if (tab === 'myGeo') { loadMyGeoIncidents(); renderGeoPlusStatus(); }
+        updateBottomNav(tab);
+        closeMoreSheet();
+        window.scrollTo(0, 0);
         if (tab === 'geoTop') loadGeoTop();
     }
+
+    // ---------- НИЖНЯЯ ПАНЕЛЬ И «ЕЩЁ» ----------
+    // Какие разделы кому видны, по-прежнему решают скрытые кнопки .tabs (их показывает логика ролей) —
+    // шторка «Ещё» просто собирает видимые из них.
+    const BOTTOM_TABS = ['personal', 'general', 'myGeo', 'geoTop'];
+    const MORE_SECTIONS = [
+        { title: 'Для всех', items: [
+            ['vacations', 'tabVacations', 'Отпуски', '<path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/>'],
+            ['voting', 'tabVoting', 'Голосование', '<path d="M4 20h16M6 20V10l6-6 6 6v10"/><path d="m9 13 2 2 4-4"/>']
+        ]},
+        { title: 'Администратору', items: [
+            ['employees', 'tabEmployees', 'Сотрудники', '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>'],
+            ['reports', 'tabReports', 'Отчёты', '<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h3"/>'],
+            ['analytics', 'tabAnalytics', 'Аналитика', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>']
+        ]},
+        { title: 'Главному админу', items: [
+            ['superadminDashboard', 'tabSuperadminDashboard', 'Сеть', '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'],
+            ['supportAdmin', 'tabSupportAdmin', 'Тикеты', '<path d="M4 5h16v11H9l-5 4V5z"/><path d="M8 9.5h8M8 12.5h5"/>']
+        ]}
+    ];
+    let currentTabName = 'personal';
+
+    function tabButtonVisible(id) {
+        let b = document.getElementById(id);
+        return !!b && b.style.display !== 'none';
+    }
+
+    function updateBottomNav(tab) {
+        currentTabName = tab;
+        let inBottom = BOTTOM_TABS.includes(tab);
+        document.querySelectorAll('#bottomNav .bn-item').forEach(el => {
+            let on = inBottom ? el.dataset.tab === tab : el.dataset.tab === 'more';
+            el.classList.toggle('active', on);
+            if (on) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+        });
+    }
+
+    function openMoreSheet() {
+        let body = document.getElementById('moreSheetBody');
+        body.innerHTML = MORE_SECTIONS.map(sec => {
+            let tiles = sec.items.filter(it => tabButtonVisible(it[1])).map(([tab, , label, icon]) =>
+                `<button class="ms-tile${currentTabName === tab ? ' active' : ''}" onclick="switchTab('${tab}')"><i><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg></i>${label}</button>`).join('');
+            return tiles ? `<div class="ms-group">${sec.title}</div><div class="ms-grid">${tiles}</div>` : '';
+        }).join('');
+        document.getElementById('moreSheetBackdrop').classList.add('open');
+        let sheet = document.getElementById('moreSheet');
+        sheet.classList.add('open');
+        sheet.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeMoreSheet() {
+        let sheet = document.getElementById('moreSheet');
+        if (!sheet) return;
+        sheet.classList.remove('open');
+        sheet.setAttribute('aria-hidden', 'true');
+        document.getElementById('moreSheetBackdrop').classList.remove('open');
+    }
+
+    // Шторку можно смахнуть вниз
+    (function initMoreSheetSwipe() {
+        let startY = null;
+        document.addEventListener('touchstart', e => {
+            let sheet = document.getElementById('moreSheet');
+            if (sheet && sheet.classList.contains('open') && sheet.contains(e.target) && sheet.scrollTop <= 0) startY = e.touches[0].clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', e => {
+            if (startY !== null && e.changedTouches[0].clientY - startY > 60) closeMoreSheet();
+            startY = null;
+        }, { passive: true });
+    })();
 
     function setMode(mode, element) {
         currentMode = mode;
@@ -3403,7 +3806,7 @@ function submitReport(isNoComment) {
     }
 
     function loadGeoTop() {
-        if (!isAdmin) return;
+        if (!currentUser.polygon) return;
         let days = geoTopDays();
         let label = geoTopLabel(days);
         document.getElementById('geoTopLabel').textContent = (geoTopPeriod === 'day' ? 'День: ' : 'Неделя: ') + label;
@@ -3419,7 +3822,8 @@ function submitReport(isNoComment) {
                 geoTopRows = groupGeoByUser(items).sort((a, b) => b.count - a.count || b.sec - a.sec)
                     .map(u => ({ name: u.name, key: u.key, count: u.count, sec: u.sec }));
                 box.innerHTML = renderGeoTopList(geoTopRows, null);
-                document.getElementById('geoTopPublishBtn').style.display = geoTopRows.length ? 'block' : 'none';
+                document.getElementById('geoTopPublishBtn').style.display = (isAdmin && geoTopRows.length) ? 'block' : 'none';
+                box.innerHTML = renderGeoTopList(geoTopRows, myUserKey());
             })
             .catch(e => { if (loadId === geoTopLoadId) box.innerHTML = `<p style="color:var(--danger);">Не удалось загрузить: ${escapeHtml(e.message)}</p>`; });
     }
@@ -3463,6 +3867,554 @@ function submitReport(isNoComment) {
         card.innerHTML = `<h3 style="margin-top:0; border-bottom: 2px solid #f59e0b; padding-bottom: 12px; color: #222;">🏆 Топ сбоев · ${t.period === 'week' ? 'неделя' : 'день'} ${escapeHtml(t.label)}</h3>
             ${renderGeoTopList(t.rows, me)}
             <div style="font-size:12px; color:#888; margin-top:10px;">Опубликовал ${escapeHtml(t.by || '')} · ${formatBlockTime(t.at)}</div>`;
+    }
+
+    // ---------- ГЕО+ (платно, по ключу от главного админа; админам — всегда) ----------
+    // geo_plus_keys/<GEO-XXXX-XXXX> = { days, created, by, usedBy, usedName, usedAt, until, revoked }
+    // users_schedules/<userKey>/geoPlus = { key, until }
+    const GEO_PLUS_KEYS_PATH = 'geo_plus_keys';
+    const GEO_KEY_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // без I и O — их путают с 1 и 0
+    const GEO_ZONE_RADIUS = 35;   // метров: сбои ближе — одна зона
+    const GEO_ZONE_DAYS = 14;     // за сколько дней собираем точки
+    let geoPlusUntil = 0;
+    let geoPlusExpired = false;
+    let geoZones = [];
+    let geoZonesLoadedAt = 0;
+
+    function myUserKey() { return currentUser.firstName + '_' + currentUser.lastName; }
+    function hasGeoPlus() { return isAdmin || geoPlusUntil > Date.now(); }
+
+    function updateGeoPlusFromUsers() {
+        let me = (globalUsersData || {})[myUserKey()];
+        let gp = me && me.geoPlus;
+        let until = gp && gp.until ? gp.until : 0;
+        geoPlusExpired = !!until && until <= Date.now();
+        if (until !== geoPlusUntil) { geoPlusUntil = until; onGeoPlusChanged(); }
+    }
+
+    function onGeoPlusChanged() {
+        if (window.AndroidApp && window.AndroidApp.setGeoPlus) {
+            try { window.AndroidApp.setGeoPlus(geoPlusUntil > Date.now() ? geoPlusUntil : 0); } catch (e) {}
+        }
+        renderGeoPlusStatus();
+        if (hasGeoPlus() && Date.now() - geoZonesLoadedAt > 10 * 60000) refreshGeoZones();
+        if (!hasGeoPlus()) pushGeoZonesToNative([]);
+    }
+    // Зоны обновляем раз в час, чтобы напоминания в службе были свежими
+    setInterval(() => { if (currentUser.firstName && hasGeoPlus()) refreshGeoZones(); }, 3600000);
+
+    function renderGeoPlusStatus() {
+        let box = document.getElementById('geoPlusStatus');
+        let wrap = document.getElementById('geoMapWrap');
+        if (!box || !currentUser.firstName) return;
+        let pill = document.querySelector('#geoMapCard .gp-pill');
+        if (hasGeoPlus()) {
+            box.innerHTML = `<div class="gp-status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>${
+                isAdmin ? 'У администраторов Гео+ включён всегда' : `Гео+ активен до ${formatBlockTime(geoPlusUntil)}`}</div>`;
+            if (pill) pill.style.display = '';
+            wrap.style.display = 'block';
+            if (document.getElementById('myGeoTab').style.display !== 'none') ensureGeoMap();
+            return;
+        }
+        if (pill) pill.style.display = 'none';
+        wrap.style.display = 'none';
+        let ico = d => `<span class="gp-f-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${d}</svg></span>`;
+        box.innerHTML = `
+            <div class="gp-paywall-hero">
+                <div class="gp-paywall-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15.5" r="1.4"/></svg></div>
+                <h4>Гео+</h4>
+                <p>Меньше ложных сбоев и подсказки, где гео пропадает</p>
+            </div>
+            <div class="gp-teaser" aria-hidden="true">
+                <div class="gp-teaser-blur"><div class="gp-teaser-map"></div><div class="gp-teaser-rows"><div></div><div></div></div></div>
+                <div class="gp-teaser-lock"><span><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>Доступно с Гео+</span></div>
+            </div>
+            ${geoPlusExpired ? '<div class="gp-expired"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Срок Гео+ закончился — введите новый ключ</div>' : ''}
+            <ul class="gp-features">
+                <li>${ico('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>')}<div><b>Спокойная проверка</b><small>Сначала перепроверка через 10 секунд, перезапуск — только если гео правда пропало</small></div></li>
+                <li>${ico('<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>')}<div><b>Карта проблемных зон</b><small>Места, где у курьеров пропадало гео, и время сбоев</small></div></li>
+                <li>${ico('<path d="M5 12h14M13 6l6 6-6 6"/>')}<div><b>Подсказка, куда отойти</b><small>Стрелка к месту в паре метров, где гео возвращалось</small></div></li>
+            </ul>
+            <div class="gp-field">
+                <label for="geoPlusKeyInput">Ключ доступа</label>
+                <input type="text" id="geoPlusKeyInput" class="gp-key-input" placeholder="GEO-XXXX-XXXX" maxlength="13"
+                       autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done"
+                       aria-describedby="geoPlusKeyHelp geoPlusKeyError" oninput="formatGeoKeyInput(this)" onkeydown="if(event.key==='Enter') activateGeoPlusKey()">
+                <span class="gp-help" id="geoPlusKeyHelp">Ключ выдаёт главный администратор</span>
+                <span class="gp-error" id="geoPlusKeyError" role="alert"></span>
+            </div>
+            <button class="gp-btn" id="geoPlusActivateBtn" onclick="activateGeoPlusKey()">Активировать</button>`;
+    }
+
+    // Пока человек печатает, сами ставим «GEO-» и дефисы
+    function formatGeoKeyInput(el) {
+        let s = el.value.toUpperCase().replace(/[^A-Z]/g, '');
+        if (s.startsWith('GEO')) s = s.slice(3);
+        s = s.slice(0, 8);
+        el.value = s ? 'GEO-' + s.slice(0, 4) + (s.length > 4 ? '-' + s.slice(4) : '') : '';
+        setGeoKeyError('');
+    }
+    function setGeoKeyError(msg) {
+        let err = document.getElementById('geoPlusKeyError');
+        let input = document.getElementById('geoPlusKeyInput');
+        if (!err || !input) return;
+        err.textContent = msg;
+        err.classList.toggle('show', !!msg);
+        input.classList.toggle('invalid', !!msg);
+        input.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    }
+
+    function normalizeGeoKey(raw) {
+        let s = String(raw || '').toUpperCase().replace(/[^A-Z]/g, '');
+        if (s.startsWith('GEO')) s = s.slice(3);
+        return s.length === 8 ? `GEO-${s.slice(0, 4)}-${s.slice(4)}` : null;
+    }
+
+    function activateGeoPlusKey() {
+        let key = normalizeGeoKey(document.getElementById('geoPlusKeyInput').value);
+        if (!key) { setGeoKeyError('Введите 8 букв ключа, например GEO-KXQP-TRMA'); return; }
+        let me = myUserKey();
+        let now = Date.now();
+        let btn = document.getElementById('geoPlusActivateBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Проверяем…'; }
+        let fail = msg => { setGeoKeyError(msg); if (btn) { btn.disabled = false; btn.textContent = 'Активировать'; } };
+        db.ref(`${GEO_PLUS_KEYS_PATH}/${key}`).transaction(k => {
+            if (k === null) return null;              // ключа нет (или ещё не загружен — Firebase перезапустит)
+            if (k.revoked) return;                    // отозван — отмена
+            if (k.usedBy && k.usedBy !== me) return;  // уже у другого человека — отмена
+            if (k.usedBy === me) return k;
+            k.usedBy = me;
+            k.usedName = `${currentUser.firstName} ${currentUser.lastName}`;
+            k.usedAt = now;
+            k.until = now + (k.days || 30) * 86400000;
+            return k;
+        }, (error, committed, snap) => {
+            if (error) { fail('Нет связи с сервером — проверьте интернет и попробуйте ещё раз'); return; }
+            let k = snap && snap.val();
+            if (!k) { fail('Такого ключа нет — проверьте буквы'); return; }
+            if (k.revoked) { fail('Этот ключ отозван — попросите новый у главного администратора'); return; }
+            if (k.usedBy !== me) { fail('Этот ключ уже активировал другой сотрудник'); return; }
+            db.ref(`users_schedules/${me}/geoPlus`).set({ key: key, until: k.until }).then(() => {
+                geoPlusUntil = k.until; geoPlusExpired = false;
+                onGeoPlusChanged();
+                showToast(`Гео+ включён до ${formatBlockTime(k.until)} 🎉`, 'green');
+            });
+        });
+    }
+
+    // --- Ключи: панель главного админа (вкладка «Сотрудники») ---
+    function generateGeoKey() {
+        let pick = () => GEO_KEY_LETTERS[Math.floor(Math.random() * GEO_KEY_LETTERS.length)];
+        let part = () => pick() + pick() + pick() + pick();
+        return `GEO-${part()}-${part()}`;
+    }
+
+    let geoKeyTermDays = 30;
+    function setGeoKeyTerm(days) {
+        geoKeyTermDays = days;
+        document.querySelectorAll('#geoKeyTerm button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.days === days)));
+    }
+
+    function createGeoPlusKey(attempt) {
+        if (currentUser.role !== 'superadmin') return;
+        let key = generateGeoKey();
+        let days = geoKeyTermDays;
+        db.ref(`${GEO_PLUS_KEYS_PATH}/${key}`).transaction(k => {
+            if (k !== null) return; // такой уже есть — сгенерируем другой
+            return { days: days, created: Date.now(), by: `${currentUser.firstName} ${currentUser.lastName}` };
+        }, (error, committed) => {
+            if (error) { showToast('Не удалось создать ключ: ' + error.message, 'red'); return; }
+            if (!committed) { if ((attempt || 0) < 3) createGeoPlusKey((attempt || 0) + 1); return; }
+            document.getElementById('geoKeyOut').innerHTML = `
+                <div class="gp-ticket">
+                    <code>${key}</code>
+                    <button class="gp-fab" onclick="copyGeoKey('${key}')" aria-label="Скопировать ключ"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></button>
+                    <small>Новый ключ на ${days === 365 ? '1 год' : days + ' дн.'} · отправьте его курьеру</small>
+                </div>`;
+            copyGeoKey(key, true);
+        });
+    }
+
+    function copyGeoKey(key, silent) {
+        let done = () => { if (!silent) showToast('Ключ скопирован', 'green'); else showToast('Ключ создан и скопирован', 'green'); };
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(key).then(done, () => { if (!silent) showToast('Выделите ключ и скопируйте вручную', 'blue'); }); return; }
+        } catch (e) {}
+        if (!silent) showToast('Выделите ключ и скопируйте вручную', 'blue');
+    }
+
+    function listenGeoPlusKeys() {
+        attachListener(GEO_PLUS_KEYS_PATH, 'value', snap => {
+            let box = document.getElementById('geoKeysList');
+            if (!box) return;
+            let rows = Object.entries(snap.val() || {}).sort((a, b) => (b[1].created || 0) - (a[1].created || 0));
+            if (!rows.length) { box.innerHTML = '<div class="gp-help">Ключей пока нет.</div>'; return; }
+            box.innerHTML = rows.map(([key, k]) => {
+                let chip, sub;
+                let who = escapeHtml(k.usedName || String(k.usedBy || '').replace(/_/g, ' '));
+                let term = k.days === 365 ? '1 год' : `${k.days} дн.`;
+                if (k.revoked) { chip = '<span class="gp-chip off">Отозван</span>'; sub = k.usedBy ? who : `Срок ${term}`; }
+                else if (!k.usedBy) { chip = '<span class="gp-chip new">Не активирован</span>'; sub = `Срок ${term}`; }
+                else if (k.until > Date.now()) { chip = '<span class="gp-chip on">Активен</span>'; sub = `${who} · до ${formatBlockTime(k.until)}`; }
+                else { chip = '<span class="gp-chip exp">Истёк</span>'; sub = `${who} · ${formatBlockTime(k.until)}`; }
+                let btn = k.revoked ? '' : `<button class="gp-textbtn" onclick="revokeGeoPlusKey(${escapeHtml(JSON.stringify(key))})">Отозвать</button>`;
+                return `<div class="gp-keyrow"><code>${escapeHtml(key)}</code>${chip}<span class="gp-keyrow-sub">${sub}</span>${btn}</div>`;
+            }).join('');
+        });
+    }
+
+    function revokeGeoPlusKey(key) {
+        if (!confirm(`Отозвать ключ ${key}? Гео+ у сотрудника сразу выключится.`)) return;
+        let ref = db.ref(`${GEO_PLUS_KEYS_PATH}/${key}`);
+        ref.once('value').then(s => {
+            let k = s.val() || {};
+            let jobs = [ref.update({ revoked: true })];
+            if (k.usedBy) jobs.push(db.ref(`users_schedules/${k.usedBy}/geoPlus`).remove());
+            return Promise.all(jobs);
+        }).then(() => showToast('Ключ отозван', 'green'))
+          .catch(e => showToast('Не удалось отозвать: ' + e.message, 'red'));
+    }
+
+    // --- Проблемные зоны: точки, где пропадало гео, за последние 2 недели ---
+    function geoDist(lat1, lng1, lat2, lng2) {
+        let R = 6371000, toR = Math.PI / 180;
+        let dLat = (lat2 - lat1) * toR, dLng = (lng2 - lng1) * toR;
+        let a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(a));
+    }
+    function geoBearingDeg(lat1, lng1, lat2, lng2) {
+        let toR = Math.PI / 180;
+        let y = Math.sin((lng2 - lng1) * toR) * Math.cos(lat2 * toR);
+        let x = Math.cos(lat1 * toR) * Math.sin(lat2 * toR) - Math.sin(lat1 * toR) * Math.cos(lat2 * toR) * Math.cos((lng2 - lng1) * toR);
+        return (Math.atan2(y, x) / toR + 360) % 360;
+    }
+    function geoBearingWord(lat1, lng1, lat2, lng2) {
+        let deg = geoBearingDeg(lat1, lng1, lat2, lng2);
+        return ['на север', 'на северо-восток', 'на восток', 'на юго-восток', 'на юг', 'на юго-запад', 'на запад', 'на северо-запад'][Math.round(deg / 45) % 8];
+    }
+
+    function buildGeoZones(points) {
+        let clusters = [];
+        points.slice().sort((a, b) => a.start - b.start).forEach(p => {
+            let c = clusters.find(c => geoDist(c.lat, c.lng, p.lossLat, p.lossLng) <= GEO_ZONE_RADIUS);
+            if (!c) { c = { lat: p.lossLat, lng: p.lossLng, items: [], users: new Set(), fixes: [] }; clusters.push(c); }
+            c.items.push(p);
+            c.users.add(p.userKey);
+            c.lat = c.items.reduce((s, i) => s + i.lossLat, 0) / c.items.length;
+            c.lng = c.items.reduce((s, i) => s + i.lossLng, 0) / c.items.length;
+            if (typeof p.fixLat === 'number' && typeof p.fixLng === 'number') c.fixes.push([p.fixLat, p.fixLng]);
+        });
+        // Зона — если гео пропадало в одном месте 2 раза и чаще
+        return clusters.filter(c => c.items.length >= 2).map(c => {
+            let z = {
+                id: c.lat.toFixed(4) + '_' + c.lng.toFixed(4),
+                lat: c.lat, lng: c.lng, r: GEO_ZONE_RADIUS,
+                count: c.items.length, couriers: c.users.size,
+                times: c.items.map(i => i.start).sort((a, b) => b - a).slice(0, 6)
+            };
+            // Подсказка: гео возвращалось хотя бы 2 раза в паре метров от зоны — туда и показываем стрелку
+            let fx = c.fixes.filter(f => { let d = geoDist(c.lat, c.lng, f[0], f[1]); return d >= 3 && d <= 120; });
+            if (fx.length >= 2) {
+                z.hintLat = fx.reduce((s, f) => s + f[0], 0) / fx.length;
+                z.hintLng = fx.reduce((s, f) => s + f[1], 0) / fx.length;
+                z.hintDist = Math.max(2, Math.round(geoDist(c.lat, c.lng, z.hintLat, z.hintLng)));
+                z.hintDir = geoBearingWord(c.lat, c.lng, z.hintLat, z.hintLng);
+                z.hintDeg = geoBearingDeg(c.lat, c.lng, z.hintLat, z.hintLng);
+            }
+            return z;
+        }).sort((a, b) => b.count - a.count);
+    }
+
+    function pushGeoZonesToNative(zones) {
+        if (!(window.AndroidApp && window.AndroidApp.setGeoZones)) return;
+        try {
+            window.AndroidApp.setGeoZones(JSON.stringify(zones.map(z => ({
+                id: z.id, lat: z.lat, lng: z.lng, r: z.r, couriers: z.couriers, count: z.count,
+                hintDist: z.hintDist || 0, hintDir: z.hintDir || ''
+            }))));
+        } catch (e) {}
+    }
+
+    function refreshGeoZones() {
+        if (!currentUser.polygon) return;
+        geoZonesLoadedAt = Date.now();
+        let today = getTodayDateStr();
+        let days = Array.from({ length: GEO_ZONE_DAYS }, (_, i) => geoAddDays(today, -i));
+        Promise.all(days.map(d => db.ref(getPolyPath(currentUser.polygon, `geo_incidents/${d}`)).once('value')))
+            .then(snaps => {
+                let pts = [];
+                snaps.forEach(s => Object.values(s.val() || {}).forEach(it => {
+                    if (it && typeof it.lossLat === 'number' && typeof it.lossLng === 'number') pts.push(it);
+                }));
+                geoZones = buildGeoZones(pts);
+                saveOfflineCache('offline_geoZones', geoZones);
+                pushGeoZonesToNative(geoZones);
+                renderGeoZonesList();
+                renderGeoMapLayers();
+            })
+            .catch(e => console.log('geo zones: ' + e.message));
+    }
+
+    function renderGeoZonesList() {
+        let box = document.getElementById('geoZonesList');
+        if (!box) return;
+        let stats = document.getElementById('geoZoneStats');
+        let total = geoZones.reduce((s, z) => s + z.count, 0);
+        let hints = geoZones.filter(z => z.hintDist).length;
+        if (stats) stats.innerHTML = [[geoZones.length, geoPlural(geoZones.length, 'зона', 'зоны', 'зон')], [total, geoPlural(total, 'сбой', 'сбоя', 'сбоев')], [hints, geoPlural(hints, 'подсказка', 'подсказки', 'подсказок')]]
+            .map(([v, l]) => `<div class="gp-stat"><b>${v}</b><span>${l}</span></div>`).join('');
+        let sub = document.getElementById('gpSubtitle');
+        if (sub && geoZonesLoadedAt) sub.textContent = `За ${GEO_ZONE_DAYS} дней · обновлено в ${new Date(geoZonesLoadedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+        if (!geoZones.length) {
+            box.innerHTML = `<div class="gp-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><b>Проблемных зон пока нет.</b><br>Зона появится, когда гео пропадёт в одном месте 2 раза и чаще.</span></div>`;
+            return;
+        }
+        let fmt = ts => {
+            let d = new Date(ts);
+            let t = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            return d.toDateString() === new Date().toDateString() ? 'сегодня ' + t : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ' ' + t;
+        };
+        box.innerHTML = geoZones.map((z, i) => `
+            <button class="gp-zone" onclick="focusGeoZone(${i})" aria-label="Показать зону ${i + 1} на карте">
+                <span class="gp-zone-num" aria-hidden="true">${i + 1}</span>
+                <span class="gp-zone-title">${z.count} ${geoPlural(z.count, 'сбой', 'сбоя', 'сбоев')} · ${z.couriers} ${geoPlural(z.couriers, 'курьер', 'курьера', 'курьеров')}</span>
+                <span class="gp-zone-chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
+                <span class="gp-zone-meta"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>последний — ${fmt(z.times[0])}</span>
+                ${z.hintDist ? `<span class="gp-zone-hint"><svg viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(${Math.round(z.hintDeg || 0)}deg)"><path d="M12 19V5M6 11l6-6 6 6"/></svg>Отойдите ~${z.hintDist} м ${z.hintDir}</span>` : ''}
+            </button>`).join('');
+    }
+
+    function zoomGeoMap(delta) {
+        if (!geoMap) return;
+        if (geoMapEngine === 'google') geoMap.setZoom(geoMap.getZoom() + delta);
+        else geoMap.setZoom(geoMap.getZoom() + delta);
+    }
+
+    // --- Карта: Google Карты; если доступ к ним не включён — чистая подложка без значков ---
+    let geoMap = null;
+    let geoMapEngine = null;   // 'google' | 'leaflet'
+    let geoMapLayers = [];
+    let geoMeLayers = [];
+    let geoMapStarting = false;
+
+    function googleMapsBlocked() {
+        try { return parseInt(localStorage.getItem('gmBlockedUntil') || '0', 10) > Date.now(); } catch (e) { return false; }
+    }
+    function markGoogleMapsBlocked() {
+        try { localStorage.setItem('gmBlockedUntil', String(Date.now() + 6 * 3600000)); } catch (e) {}
+    }
+
+    function loadScriptOnce(id, src) {
+        return new Promise((resolve, reject) => {
+            if (document.getElementById(id)) { resolve(); return; }
+            let s = document.createElement('script');
+            s.id = id; s.src = src; s.async = true;
+            s.onload = () => resolve(); s.onerror = () => reject(new Error('load ' + src));
+            document.head.appendChild(s);
+        });
+    }
+
+    function loadGoogleMaps() {
+        if (googleMapsBlocked()) return Promise.resolve(false);
+        if (window.google && window.google.maps && window.google.maps.Map) return Promise.resolve(true);
+        return db.ref('maps_config/googleMapsKey').once('value')
+            .then(s => s.val() || firebaseConfig.apiKey, () => firebaseConfig.apiKey)
+            .then(key => new Promise(resolve => {
+                let t = setTimeout(() => resolve(false), 8000);
+                window.__x5GmReady = () => { clearTimeout(t); resolve(true); };
+                window.gm_authFailure = () => { markGoogleMapsBlocked(); switchGeoMapToFallback(); };
+                loadScriptOnce('gmScript', `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=__x5GmReady&language=ru&region=RU`)
+                    .catch(() => { clearTimeout(t); resolve(false); });
+            }));
+    }
+
+    function loadLeaflet() {
+        if (window.L && window.L.map) return Promise.resolve();
+        if (!document.getElementById('leafletCss')) {
+            let l = document.createElement('link');
+            l.id = 'leafletCss'; l.rel = 'stylesheet';
+            l.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+            document.head.appendChild(l);
+        }
+        return loadScriptOnce('leafletJs', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');
+    }
+
+    function geoMapCenter() {
+        let lat = workZonePolygon.reduce((s, p) => s + p.lat, 0) / workZonePolygon.length;
+        let lng = workZonePolygon.reduce((s, p) => s + p.lng, 0) / workZonePolygon.length;
+        return { lat, lng };
+    }
+
+    function ensureGeoMap() {
+        if (geoMap) {
+            if (geoMapEngine === 'leaflet') setTimeout(() => geoMap.invalidateSize(), 50);
+            return;
+        }
+        if (geoMapStarting) return;
+        geoMapStarting = true;
+        renderGeoZonesList();
+        // Карта как в Geo Yes: Leaflet + OpenStreetMap
+        initFallbackGeoMap();
+        geoMapStarting = false;
+    }
+
+    function initGoogleGeoMap() {
+        let el = document.getElementById('geoMap');
+        geoMapEngine = 'google';
+        geoMap = new google.maps.Map(el, {
+            center: geoMapCenter(), zoom: 13,
+            disableDefaultUI: true, zoomControl: false, clickableIcons: false, gestureHandling: 'greedy',
+            // Только улицы и дома — без значков заведений, транспорта и прочей символики
+            styles: [
+                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+                { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+                { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }
+            ]
+        });
+        renderGeoMapLayers();
+    }
+
+    function switchGeoMapToFallback() {
+        if (geoMapEngine !== 'google') return;
+        geoMap = null; geoMapEngine = null; geoMapLayers = []; geoMeLayers = [];
+        let box = document.getElementById('geoMap');
+        let fresh = box.cloneNode(false);
+        box.parentNode.replaceChild(fresh, box);
+        initFallbackGeoMap();
+    }
+
+    function initFallbackGeoMap() {
+        loadLeaflet().then(() => {
+            if (geoMap) return;
+            geoMapEngine = 'leaflet';
+            let c = geoMapCenter();
+            geoMap = L.map('geoMap', { zoomControl: false, attributionControl: true }).setView([c.lat, c.lng], 13);
+            // Подпись как в Geo Yes, только с российским флагом (без ссылок — чтобы нажатие не уводило из приложения)
+            geoMap.attributionControl.setPrefix('<svg class="gp-flag" viewBox="0 0 9 6" aria-hidden="true"><rect width="9" height="2" fill="#fff"/><rect y="2" width="9" height="2" fill="#0039A6"/><rect y="4" width="9" height="2" fill="#D52B1E"/></svg> Leaflet');
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19, attribution: '© OpenStreetMap'
+            }).addTo(geoMap);
+            renderGeoMapLayers();
+        }).catch(() => {
+            document.getElementById('geoMap').innerHTML = '<div style="padding:16px; color:#888; font-size:13px;">Карта не загрузилась — нужен интернет.</div>';
+        });
+    }
+
+    function clearGeoLayers(list) {
+        list.forEach(l => { if (geoMapEngine === 'google') l.setMap(null); else l.remove(); });
+        list.length = 0;
+    }
+
+    function geoPinIcon(cls, label) {
+        return L.divIcon({ className: '', html: `<div class="gp-pin ${cls}"><b>${label || ''}</b></div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+    }
+    function googleDot(color, scale) {
+        return { path: google.maps.SymbolPath.CIRCLE, scale: scale || 7, fillColor: color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 };
+    }
+
+    function renderGeoMapLayers() {
+        if (!geoMap) return;
+        clearGeoLayers(geoMapLayers);
+        let fmt = ts => new Date(ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        let zonePath = workZonePolygon.map(p => [p.lat, p.lng]);
+
+        if (geoMapEngine === 'google') {
+            geoMapLayers.push(new google.maps.Polygon({ map: geoMap, paths: workZonePolygon, strokeColor: '#2563eb', strokeOpacity: .6, strokeWeight: 2, fillColor: '#2563eb', fillOpacity: .05, clickable: false }));
+            let info = new google.maps.InfoWindow();
+            geoZones.forEach((z, i) => {
+                geoMapLayers.push(new google.maps.Circle({ map: geoMap, center: { lat: z.lat, lng: z.lng }, radius: z.r, strokeColor: '#ef4444', strokeWeight: 1.5, fillColor: '#ef4444', fillOpacity: .18, clickable: false }));
+                let m = new google.maps.Marker({ map: geoMap, position: { lat: z.lat, lng: z.lng }, icon: googleDot('#DC2626', 11), label: { text: String(i + 1), color: '#fff', fontWeight: '800', fontSize: '12px' }, title: 'Зона ' + (i + 1) });
+                m.addListener('click', () => { info.setContent(geoZonePopup(z, i, fmt)); info.open({ map: geoMap, anchor: m }); });
+                geoMapLayers.push(m);
+                if (z.hintDist) {
+                    geoMapLayers.push(new google.maps.Polyline({ map: geoMap, path: [{ lat: z.lat, lng: z.lng }, { lat: z.hintLat, lng: z.hintLng }], strokeColor: '#10b981', strokeWeight: 3, strokeOpacity: .9,
+                        icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3, fillColor: '#10b981', fillOpacity: 1, strokeColor: '#10b981' }, offset: '100%' }] }));
+                    geoMapLayers.push(new google.maps.Marker({ map: geoMap, position: { lat: z.hintLat, lng: z.hintLng }, icon: googleDot('#10b981', 7), title: 'Здесь гео возвращалось' }));
+                }
+            });
+            fitGeoMap();
+            return;
+        }
+
+        geoMapLayers.push(L.polygon(zonePath, { color: '#2563eb', weight: 2, opacity: .6, fillOpacity: .05, interactive: false }).addTo(geoMap));
+        geoZones.forEach((z, i) => {
+            geoMapLayers.push(L.circle([z.lat, z.lng], { radius: z.r, color: '#ef4444', weight: 1.5, fillColor: '#ef4444', fillOpacity: .18, interactive: false }).addTo(geoMap));
+            geoMapLayers.push(L.marker([z.lat, z.lng], { icon: geoPinIcon('', i + 1) }).bindPopup(geoZonePopup(z, i, fmt)).addTo(geoMap));
+            if (z.hintDist) {
+                geoMapLayers.push(L.polyline([[z.lat, z.lng], [z.hintLat, z.hintLng]], { color: '#10b981', weight: 3, dashArray: '6 6' }).addTo(geoMap));
+                geoMapLayers.push(L.polygon(geoArrowHead(z), { color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 1, interactive: false }).addTo(geoMap));
+                geoMapLayers.push(L.marker([z.hintLat, z.hintLng], { icon: geoPinIcon('gp-fix') }).bindPopup('Здесь гео возвращалось').addTo(geoMap));
+            }
+        });
+        fitGeoMap();
+    }
+
+    // Наконечник стрелки «куда отойти» (для подложки без Google)
+    function geoArrowHead(z) {
+        let dy = z.hintLat - z.lat, dx = (z.hintLng - z.lng) * Math.cos(z.lat * Math.PI / 180);
+        let len = Math.hypot(dx, dy) || 1e-9;
+        let ux = dx / len, uy = dy / len;
+        let size = Math.min(len * 0.35, 0.00006);
+        let k = Math.cos(z.lat * Math.PI / 180);
+        let bx = -ux * size, by = -uy * size;
+        let px = -uy * size * 0.6, py = ux * size * 0.6;
+        let tip = [z.hintLat, z.hintLng];
+        return [tip, [z.hintLat + by + py, z.hintLng + (bx + px) / k], [z.hintLat + by - py, z.hintLng + (bx - px) / k]];
+    }
+
+    function geoZonePopup(z, i, fmt) {
+        return `<div style="font-size:13px; line-height:1.4; max-width:220px;"><b>Зона ${i + 1}</b><br>
+            ${z.count} ${geoPlural(z.count, 'сбой', 'сбоя', 'сбоев')} у ${z.couriers} ${geoPlural(z.couriers, 'курьера', 'курьеров', 'курьеров')}<br>
+            <span style="color:#666;">${z.times.slice(0, 4).map(fmt).join('<br>')}</span>
+            ${z.hintDist ? `<br><b style="color:#047857;">➜ Отойдите ~${z.hintDist} м ${z.hintDir}</b>` : ''}</div>`;
+    }
+
+    function fitGeoMap() {
+        if (!geoMap || !geoZones.length) return;
+        let pts = [];
+        geoZones.forEach(z => { pts.push([z.lat, z.lng]); if (z.hintDist) pts.push([z.hintLat, z.hintLng]); });
+        if (geoMapEngine === 'google') {
+            let b = new google.maps.LatLngBounds();
+            pts.forEach(p => b.extend({ lat: p[0], lng: p[1] }));
+            geoMap.fitBounds(b, 60);
+            if (pts.length < 3) google.maps.event.addListenerOnce(geoMap, 'idle', () => { if (geoMap.getZoom() > 17) geoMap.setZoom(17); });
+        } else {
+            geoMap.fitBounds(pts, { padding: [40, 40], maxZoom: 17 });
+        }
+    }
+
+    function focusGeoZone(i) {
+        let z = geoZones[i];
+        if (!geoMap || !z) return;
+        if (geoMapEngine === 'google') { geoMap.panTo({ lat: z.lat, lng: z.lng }); geoMap.setZoom(18); }
+        else geoMap.setView([z.lat, z.lng], 18, { animate: true });
+        document.getElementById('geoMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Кнопка «Где я сейчас»
+    function locateMeOnGeoMap() {
+        if (!geoMap || !navigator.geolocation) return;
+        let btn = document.querySelector('.gp-locate');
+        btn.classList.add('busy');
+        navigator.geolocation.getCurrentPosition(pos => {
+            btn.classList.remove('busy');
+            let lat = pos.coords.latitude, lng = pos.coords.longitude, acc = Math.min(pos.coords.accuracy || 20, 300);
+            clearGeoLayers(geoMeLayers);
+            if (geoMapEngine === 'google') {
+                geoMeLayers.push(new google.maps.Circle({ map: geoMap, center: { lat, lng }, radius: acc, strokeColor: '#2563eb', strokeWeight: 1, fillColor: '#2563eb', fillOpacity: .12, clickable: false }));
+                geoMeLayers.push(new google.maps.Marker({ map: geoMap, position: { lat, lng }, icon: googleDot('#2563eb', 8), title: 'Вы здесь' }));
+                geoMap.panTo({ lat, lng }); geoMap.setZoom(17);
+            } else {
+                geoMeLayers.push(L.circle([lat, lng], { radius: acc, color: '#2563eb', weight: 1, fillOpacity: .12, interactive: false }).addTo(geoMap));
+                geoMeLayers.push(L.marker([lat, lng], { icon: geoPinIcon('gp-me') }).addTo(geoMap));
+                geoMap.setView([lat, lng], 17, { animate: true });
+            }
+            let near = geoZones.find(z => geoDist(lat, lng, z.lat, z.lng) <= z.r + 20);
+            if (near && near.hintDist) showToast(`Вы в проблемной зоне. Если гео пропадёт — отойдите ~${near.hintDist} м ${near.hintDir}`, 'blue');
+        }, err => {
+            btn.classList.remove('busy');
+            showToast('Не удалось определить местоположение', 'red');
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
     }
 
     // ---------- БЛОКИРОВКИ «Я НА ЛИНИИ»: панель суперадмина ----------
@@ -3930,6 +4882,460 @@ function submitReport(isNoComment) {
         if (!log) return;
         let el = log.querySelector('.ai-thinking');
         if (el) el.remove();
+    }
+
+    // ---------- ЛАМПА СО ШНУРКОМ: светлая / тёмная тема ----------
+    // Перенесено на чистый JS по мотивам «Pull Cord» из KokonutUI (MIT, @dorianbaffier, kokonutui.com).
+    // Шнурок — цепочка точек фиксированной длины (Verlet), тянется пальцем; щелчок — когда потянули достаточно.
+    (function initThemeLamp() {
+        const W = 64, H = 96;
+        const ANCHOR = { x: 32, y: 34 };
+        const LINKS = 6, LINK = 5.5;
+        const STEP = 1 / 120, GRAVITY = 1400, DAMPING = 0.992, MAX_SPEED = 4;
+        const BEND_MIN = LINK * 1.9, BEND_STIFFNESS = 0.8, ITERATIONS = 14;
+        const CLICK_PULL = 16, MAX_STRETCH = 26;
+        const REST_EPSILON = 0.015, REST_STEPS = 24;
+
+        const damp = (d, max) => max * (1 - Math.exp(-d / max));
+        const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+
+        function setTheme(dark) {
+            if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+            else document.documentElement.removeAttribute('data-theme');
+            try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+            if (navigator.vibrate) navigator.vibrate(8);
+            render();
+        }
+
+        const xs = new Float64Array(LINKS + 1), ys = new Float64Array(LINKS + 1);
+        for (let i = 0; i <= LINKS; i++) { xs[i] = ANCHOR.x; ys[i] = ANCHOR.y + i * LINK; }
+        const restX = Float64Array.from(xs), restY = Float64Array.from(ys);
+        const pxs = Float64Array.from(xs), pys = Float64Array.from(ys);
+        const s = { raf: 0, last: 0, carry: 0, still: 0, held: -1, tx: 0, ty: 0, armed: true,
+                    reduce: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches };
+
+        function relax(a, b, length, bend) {
+            const aFixed = a === 0 || a === s.held, bFixed = b === s.held;
+            if (aFixed && bFixed) return;
+            const dx = xs[b] - xs[a], dy = ys[b] - ys[a];
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            if (bend && dist >= length) return;
+            const diff = ((dist - length) / dist) * (bend ? BEND_STIFFNESS : 1);
+            const wa = aFixed ? 0 : (bFixed ? 1 : 0.5);
+            xs[a] += dx * diff * wa; ys[a] += dy * diff * wa;
+            xs[b] -= dx * diff * (1 - wa); ys[b] -= dy * diff * (1 - wa);
+        }
+        function cordPath() {
+            let d = `M${xs[0].toFixed(2)} ${ys[0].toFixed(2)}`;
+            for (let i = 1; i < LINKS; i++) {
+                d += ` Q${xs[i].toFixed(2)} ${ys[i].toFixed(2)} ${((xs[i] + xs[i + 1]) / 2).toFixed(2)} ${((ys[i] + ys[i + 1]) / 2).toFixed(2)}`;
+            }
+            return d + ` L${xs[LINKS].toFixed(2)} ${ys[LINKS].toFixed(2)}`;
+        }
+
+        let wrap, svg, cord, hit, bead, sw;
+        function draw() {
+            const d = cordPath();
+            cord.setAttribute('d', d); hit.setAttribute('d', d);
+            const n = LINKS;
+            const angle = Math.atan2(xs[n] - xs[n - 1], ys[n] - ys[n - 1]) * 180 / Math.PI;
+            bead.setAttribute('transform', `translate(${xs[n].toFixed(2)} ${ys[n].toFixed(2)}) rotate(${(-angle).toFixed(2)})`);
+        }
+        function integrate() {
+            let moved = 0;
+            for (let i = 1; i <= LINKS; i++) {
+                if (i === s.held) continue;
+                let vx = (xs[i] - pxs[i]) * DAMPING, vy = (ys[i] - pys[i]) * DAMPING;
+                const sp = Math.hypot(vx, vy);
+                if (sp > MAX_SPEED) { vx *= MAX_SPEED / sp; vy *= MAX_SPEED / sp; }
+                pxs[i] = xs[i]; pys[i] = ys[i];
+                xs[i] += vx; ys[i] += vy + GRAVITY * STEP * STEP;
+                moved = Math.max(moved, Math.abs(vx) + Math.abs(vy));
+            }
+            if (s.held > 0) {
+                const i = s.held;
+                moved = Math.max(moved, Math.abs(s.tx - xs[i]) + Math.abs(s.ty - ys[i]));
+                pxs[i] = xs[i]; pys[i] = ys[i]; xs[i] = s.tx; ys[i] = s.ty;
+            }
+            return moved;
+        }
+        function constrain() {
+            for (let k = 0; k < ITERATIONS; k++) {
+                for (let i = 0; i < LINKS; i++) relax(i, i + 1, LINK, false);
+                for (let i = 0; i + 2 <= LINKS; i++) relax(i, i + 2, BEND_MIN, true);
+            }
+        }
+        function tick(now) {
+            s.raf = 0;
+            const elapsed = s.last ? Math.min((now - s.last) / 1000, 0.05) : STEP;
+            s.last = now; s.carry += elapsed;
+            let moved = 0;
+            while (s.carry >= STEP) { moved = Math.max(moved, integrate()); constrain(); s.carry -= STEP; }
+            draw();
+            s.still = moved < REST_EPSILON ? s.still + 1 : 0;
+            if (s.held > 0 || s.still < REST_STEPS) s.raf = requestAnimationFrame(tick); else s.last = 0;
+        }
+        function wake() { s.still = 0; if (!s.raf) s.raf = requestAnimationFrame(tick); }
+
+        function localPoint(e) {
+            const r = svg.getBoundingClientRect();
+            return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+        }
+        // Шнурок можно чуть вытянуть с нарастающим сопротивлением, но не оторвать
+        function reach(index, x, y) {
+            const dx = x - ANCHOR.x, dy = y - ANCHOR.y;
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            const length = index * LINK;
+            if (dist <= length) return { x, y, pull: 0 };
+            const allowed = length + damp(dist - length, MAX_STRETCH);
+            return { x: ANCHOR.x + dx / dist * allowed, y: ANCHOR.y + dy / dist * allowed, pull: dy > 0 ? (allowed - length) * (dy / dist) : 0 };
+        }
+        function down(e) {
+            if (s.held > 0 || (e.pointerType === 'mouse' && e.button !== 0)) return;
+            e.preventDefault();
+            const p = localPoint(e);
+            let nearest = LINKS, best = Infinity;
+            for (let i = 1; i <= LINKS; i++) {
+                const d = Math.hypot(xs[i] - p.x, ys[i] - p.y);
+                if (d < best) { best = d; nearest = i; }
+            }
+            svg.setPointerCapture(e.pointerId);
+            s.held = nearest; s.tx = xs[nearest]; s.ty = ys[nearest]; s.armed = true;
+            wrap.classList.add('grabbing');
+            wake();
+        }
+        function move(e) {
+            if (s.held < 0) return;
+            const t = reach(s.held, ...Object.values(localPoint(e)));
+            s.tx = t.x; s.ty = t.y;
+            // Щелчок — один раз за рывок, сразу как потянули достаточно; взводится, когда шнурок отпустил
+            if (s.armed && t.pull > CLICK_PULL) { s.armed = false; setTheme(!isDark()); }
+            else if (!s.armed && t.pull < CLICK_PULL * 0.4) s.armed = true;
+            wake();
+        }
+        function up() {
+            if (s.held < 0) return;
+            s.held = -1;
+            wrap.classList.remove('grabbing');
+            if (s.reduce) { xs.set(restX); ys.set(restY); pxs.set(restX); pys.set(restY); draw(); return; }
+            wake();
+        }
+        function render() {
+            if (!wrap) return;
+            const on = !isDark();
+            wrap.classList.toggle('off', !on);
+            sw.setAttribute('aria-checked', String(on));
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const header = document.querySelector('#mainScreen .top-header');
+            if (!header) return;
+            const rest = cordPath();
+            header.insertAdjacentHTML('beforeend', `
+                <div class="lamp" id="themeLamp">
+                    <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
+                        <circle class="lamp-glow" cx="${ANCHOR.x}" cy="34" r="26"/>
+                        <line class="lamp-wire" x1="${ANCHOR.x}" x2="${ANCHOR.x}" y1="0" y2="14"/>
+                        <path class="lamp-shade" d="M${ANCHOR.x - 6} 14 h12 l13 16 q1 3 -2 3 h-34 q-3 0 -2 -3 Z"/>
+                        <path class="lamp-bulb" d="M${ANCHOR.x - 7} 33 a7 6 0 0 0 14 0 Z"/>
+                        <path class="lamp-cord" d="${rest}"/>
+                        <path class="lamp-hit" d="${rest}"/>
+                        <g class="lamp-bead" transform="translate(${ANCHOR.x} ${ANCHOR.y + LINKS * LINK})">
+                            <circle r="18" fill="transparent"/>
+                            <rect x="-4" y="1" width="8" height="15" rx="4"/>
+                        </g>
+                    </svg>
+                    <button class="sr-only-btn" role="switch" aria-label="Свет: светлая тема"></button>
+                </div>`);
+            wrap = document.getElementById('themeLamp');
+            svg = wrap.querySelector('svg');
+            cord = wrap.querySelector('.lamp-cord');
+            hit = wrap.querySelector('.lamp-hit');
+            bead = wrap.querySelector('.lamp-bead');
+            sw = wrap.querySelector('.sr-only-btn');
+            hit.addEventListener('pointerdown', down);
+            bead.addEventListener('pointerdown', down);
+            svg.addEventListener('pointermove', move);
+            svg.addEventListener('pointerup', up);
+            svg.addEventListener('pointercancel', up);
+            svg.addEventListener('lostpointercapture', up);
+            sw.addEventListener('click', () => {
+                setTheme(!isDark());
+                if (!s.reduce) { pys[LINKS] = ys[LINKS] - 5; wake(); }
+            });
+            render();
+        });
+    })();
+
+    // ---------- ИИ-РАЗБОР СБОЕВ ЗА НЕДЕЛЮ (только главный админ) ----------
+    // Настройки (адрес API, ключ, модель) хранятся ТОЛЬКО в этом телефоне — в Firebase ключ не попадает.
+    // Готовые разборы сохраняются в polygons/<полигон>/geo_ai_reports/<понедельник> и видны в «Аналитике».
+    const GEO_AI_SETTINGS_KEY = 'geoAiSettings';
+    let geoAiWeek = null;     // понедельник выбранной недели (YYYY-MM-DD)
+    let geoAiBusy = false;
+
+    function readGeoAiSettings() {
+        try { return JSON.parse(localStorage.getItem(GEO_AI_SETTINGS_KEY) || 'null') || {}; } catch (e) { return {}; }
+    }
+    function geoAiProvider(s) {
+        if (s.provider) return s.provider;
+        if (!s.baseUrl && !s.model) return 'anthropic'; // по умолчанию — Anthropic с веб-поиском
+        return /anthropic\.com/i.test(s.baseUrl || '') || /^claude/i.test(s.model || '') ? 'anthropic' : 'openai';
+    }
+    function geoAiReady(s) { return !!(s.baseUrl && s.apiKey && (s.model || geoAiProvider(s) === 'anthropic')); }
+
+    function mondayOf(dateStr) {
+        let [y, m, d] = dateStr.split('-').map(Number);
+        let wd = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+        return geoAddDays(dateStr, -wd);
+    }
+
+    function initGeoAiPanel() {
+        let slot = document.getElementById('geoAiPanelSlot');
+        if (!slot || document.getElementById('geoAiCard')) return;
+        slot.innerHTML = `
+            <section class="card gp-card" id="geoAiCard" aria-labelledby="gpAiTitle">
+                <header class="gp-head">
+                    <span class="gp-head-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></span>
+                    <div class="gp-head-text">
+                        <h3 id="gpAiTitle">ИИ-разбор сбоев за неделю</h3>
+                        <p>Сравнивает сбои с обстановкой в Курске: тревоги, РЭБ, погода</p>
+                    </div>
+                    <span class="gp-pill">Главный</span>
+                </header>
+                <div id="geoAiSettingsBox"></div>
+                <div class="gp-sub" style="margin-top: 20px;">Разбор недели</div>
+                <div class="geo-datebar">
+                    <button class="geo-datebtn" onclick="shiftGeoAiWeek(-1)" aria-label="Прошлая неделя">‹</button>
+                    <div id="geoAiWeekLabel" class="geo-toplabel"></div>
+                    <button class="geo-datebtn" onclick="shiftGeoAiWeek(1)" aria-label="Следующая неделя">›</button>
+                </div>
+                <button class="gp-btn" id="geoAiRunBtn" onclick="runGeoAiAnalysis(false)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>Разобрать неделю
+                </button>
+                <div id="geoAiReport" class="gp-ai-report"></div>
+            </section>`;
+        geoAiWeek = mondayOf(getTodayDateStr());
+        renderGeoAiSettings(false);
+        loadGeoAiReport();
+        maybeAutoGeoAiAnalysis();
+    }
+
+    function renderGeoAiSettings(editing, provOverride) {
+        let box = document.getElementById('geoAiSettingsBox');
+        if (!box) return;
+        let s = readGeoAiSettings();
+        if (geoAiReady(s) && !editing) {
+            let masked = s.apiKey.length > 8 ? s.apiKey.slice(0, 4) + '••••' + s.apiKey.slice(-4) : '••••';
+            box.innerHTML = `<div class="gp-status" style="justify-content: space-between;">
+                    <span style="display:flex; gap:8px; align-items:center; min-width:0;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(s.model || 'claude-opus-5-5')} · ${escapeHtml(masked)}</span></span>
+                    <button class="gp-textbtn" style="color: var(--gp-primary); min-height: 36px;" onclick="renderGeoAiSettings(true)">Изменить</button>
+                </div>
+                <div class="gp-help">Разбор запускается сам в конце недели (воскресенье после 20:10 или при первом входе на следующей неделе). Ключ хранится только в этом телефоне.</div>`;
+            return;
+        }
+        let prov = provOverride || geoAiProvider(s);
+        box.innerHTML = `
+            <div class="gp-field" style="margin-top: 0;">
+                <label id="gpAiProvLabel">Формат API</label>
+                <div class="gp-seg" role="group" aria-labelledby="gpAiProvLabel" style="grid-template-columns: 1fr 1fr;" id="geoAiProv">
+                    <button type="button" data-p="anthropic" aria-pressed="${prov === 'anthropic'}" onclick="setGeoAiProvider('anthropic')">Anthropic</button>
+                    <button type="button" data-p="openai" aria-pressed="${prov === 'openai'}" onclick="setGeoAiProvider('openai')">OpenAI-совместимый</button>
+                </div>
+            </div>
+            <div class="gp-field"><label for="geoAiBase">Base URL</label>
+                <input type="url" id="geoAiBase" class="gp-input" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false"
+                       placeholder="${prov === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.example.com/v1'}" value="${escapeHtml(s.baseUrl || '')}"></div>
+            <div class="gp-field"><label for="geoAiKey">API-ключ</label>
+                <input type="password" id="geoAiKey" class="gp-input" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" value="${escapeHtml(s.apiKey || '')}"></div>
+            <div class="gp-field"><label for="geoAiModel">Модель</label>
+                <input type="text" id="geoAiModel" class="gp-input" autocapitalize="none" autocorrect="off" spellcheck="false"
+                       placeholder="${prov === 'anthropic' ? 'claude-opus-5-5' : 'название модели'}" value="${escapeHtml(s.model || '')}">
+                <span class="gp-help">${prov === 'anthropic' ? 'Для Anthropic модель сама ищет новости по Курску в интернете (веб-поиск).' : 'Чтобы модель проверяла новости Курска, выберите модель с доступом в интернет у вашего провайдера.'}</span>
+                <span class="gp-error" id="geoAiSettingsError" role="alert"></span></div>
+            <div style="display:grid; grid-template-columns: ${geoAiReady(s) ? '1fr 1fr' : '1fr'}; gap: 8px;">
+                ${geoAiReady(s) ? '<button class="gp-btn" style="background:#F1F5F9; color: var(--gp-text);" onclick="renderGeoAiSettings(false)">Отмена</button>' : ''}
+                <button class="gp-btn" onclick="saveGeoAiSettings()">Сохранить</button>
+            </div>`;
+    }
+
+    function setGeoAiProvider(p) {
+        // перерисовываем форму под выбранный формат, не теряя введённое
+        let vals = ['geoAiBase', 'geoAiKey', 'geoAiModel'].map(id => document.getElementById(id).value);
+        renderGeoAiSettings(true, p);
+        ['geoAiBase', 'geoAiKey', 'geoAiModel'].forEach((id, i) => { document.getElementById(id).value = vals[i]; });
+    }
+
+    function saveGeoAiSettings() {
+        let base = document.getElementById('geoAiBase').value.trim().replace(/\/+$/, '');
+        let key = document.getElementById('geoAiKey').value.trim();
+        let model = document.getElementById('geoAiModel').value.trim();
+        let err = document.getElementById('geoAiSettingsError');
+        let provider = (document.querySelector('#geoAiProv button[aria-pressed="true"]') || {}).dataset?.p || 'anthropic';
+        let fail = m => { err.textContent = m; err.classList.add('show'); };
+        if (!/^https:\/\//i.test(base)) return fail('Base URL должен начинаться с https://');
+        if (key.length < 10) return fail('Вставьте API-ключ целиком');
+        if (provider === 'openai' && !model) return fail('Укажите название модели');
+        try { localStorage.setItem(GEO_AI_SETTINGS_KEY, JSON.stringify({ provider, baseUrl: base, apiKey: key, model: model || 'claude-opus-5-5' })); } catch (e) {}
+        showToast('Настройки ИИ сохранены в этом телефоне', 'green');
+        renderGeoAiSettings(false);
+    }
+
+    function shiftGeoAiWeek(dir) {
+        geoAiWeek = geoAddDays(geoAiWeek || mondayOf(getTodayDateStr()), dir * 7);
+        loadGeoAiReport();
+    }
+
+    function geoAiWeekLabelText(monday) {
+        return `${geoDayLabel(monday)} – ${geoDayLabel(geoAddDays(monday, 6))}`;
+    }
+
+    function loadGeoAiReport() {
+        let label = document.getElementById('geoAiWeekLabel');
+        if (!label) return;
+        label.textContent = 'Неделя: ' + geoAiWeekLabelText(geoAiWeek);
+        let box = document.getElementById('geoAiReport');
+        box.innerHTML = '<div class="gp-help">Загрузка…</div>';
+        db.ref(getPolyPath(currentUser.polygon, `geo_ai_reports/${geoAiWeek}`)).once('value').then(snap => {
+            let r = snap.val();
+            box.innerHTML = r ? renderGeoAiReport(r) : '<div class="gp-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><span>Разбора за эту неделю ещё нет. Нажмите «Разобрать неделю».</span></div>';
+        }).catch(() => { box.innerHTML = '<div class="gp-help">Нет связи — разбор не загрузился.</div>'; });
+    }
+
+    // Простой и безопасный markdown → HTML (сначала экранируем, потом заголовки/списки/жирный)
+    function geoAiMarkdown(text) {
+        let lines = escapeHtml(text).split('\n');
+        let html = '', inList = false;
+        lines.forEach(line => {
+            let t = line.trim();
+            let li = t.match(/^[-*•]\s+(.*)/) || t.match(/^\d+[.)]\s+(.*)/);
+            if (li) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${li[1]}</li>`; return; }
+            if (inList) { html += '</ul>'; inList = false; }
+            if (!t) return;
+            let h = t.match(/^#{1,4}\s+(.*)/);
+            html += h ? `<h4>${h[1]}</h4>` : `<p>${t}</p>`;
+        });
+        if (inList) html += '</ul>';
+        return html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    }
+
+    function renderGeoAiReport(r) {
+        return `<div class="gp-ai-meta">${escapeHtml(r.model || '')} · ${formatBlockTime(r.at)} · ${r.incidents || 0} ${geoPlural(r.incidents || 0, 'сбой', 'сбоя', 'сбоев')}${r.auto ? ' · автоматически' : ''}</div>
+                <div class="gp-ai-text">${geoAiMarkdown(r.text || '')}</div>`;
+    }
+
+    function buildGeoAiPrompt(monday, items) {
+        // Имена курьеров наружу не отправляем — только «Курьер 1, 2, …»
+        let alias = {}, n = 0;
+        let rows = items.sort((a, b) => a.start - b.start).map(it => {
+            if (!alias[it.userKey]) alias[it.userKey] = 'Курьер ' + (++n);
+            let d = new Date(it.start + 3 * 3600000);
+            let date = d.toISOString().slice(0, 10);
+            let t = ts => new Date(ts + 3 * 3600000).toISOString().slice(11, 16);
+            let place = typeof it.lossLat === 'number' ? `${it.lossLat.toFixed(4)},${it.lossLng.toFixed(4)}` : '—';
+            return `${date} | ${t(it.start)}–${t(it.end || it.start)} | ${Math.round((it.durationSec || 0) / 60)} мин | ${it.kind === 'no_fix' ? 'нет координат' : 'вне зоны'} | ${alias[it.userKey]} | ${place}`;
+        });
+        return `Ты аналитик службы доставки в Курске (полигон: ${currentUser.polygon}). Ниже журнал сбоев геолокации курьеров за неделю ${geoAiWeekLabelText(monday)} (время московское). Сбой — телефон показывал, что курьер вне рабочей зоны, или вообще не выдавал координаты.
+
+Формат строки: дата | время | длительность | тип | курьер | точка, где пропало гео (широта,долгота).
+
+${rows.join('\n')}
+
+Задача:
+1. Найди закономерности: дни, часы, места, одновременные сбои у нескольких курьеров (признак внешней причины, а не телефона).
+2. Сопоставь с обстановкой в Курске в эти даты и часы: воздушные тревоги, угроза БПЛА или ракетная опасность, работа РЭБ и подавление/подмена GPS, отключения мобильной связи или интернета, погода. Если можешь искать в интернете — проверь новости и сообщения за эти даты; если нет — честно напиши, что сопоставление сделано без свежих данных.
+3. Для каждой вероятной причины укажи уверенность (высокая/средняя/низкая) и на чём она основана.
+4. Дай 3–5 практических рекомендаций курьерам и администратору.
+
+Ответ на русском, кратко, с заголовками и списками.`;
+    }
+
+    async function callGeoAi(s, prompt) {
+        let provider = geoAiProvider(s);
+        if (provider === 'anthropic') {
+            let url = s.baseUrl.replace(/\/+$/, '') + (/\/v1$/.test(s.baseUrl) ? '/messages' : '/v1/messages');
+            let messages = [{ role: 'user', content: prompt }];
+            for (let step = 0; step < 4; step++) {
+                let res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json',
+                        'x-api-key': s.apiKey,
+                        'anthropic-version': '2026-10-21',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: s.model || 'claude-opus-5-5',
+                        max_tokens: 16000,
+                        output_config: { effort: 'high' },
+                        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 8, user_location: { type: 'approximate', city: 'Kursk', country: 'RU', timezone: 'Europe/Moscow' } }],
+                        messages: messages
+                    })
+                });
+                let data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error((data.error && data.error.message) || ('HTTP ' + res.status));
+                if (data.stop_reason === 'refusal') throw new Error('Модель отказалась отвечать на этот запрос');
+                if (data.stop_reason === 'pause_turn') {
+                    // Веб-поиск ещё идёт — продолжаем тот же ответ
+                    messages.push({ role: 'assistant', content: data.content });
+                    continue;
+                }
+                return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+            }
+            throw new Error('Модель слишком долго искала — попробуйте ещё раз');
+        }
+        let url = s.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+        let res = await fetch(url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + s.apiKey },
+            body: JSON.stringify({ model: s.model, messages: [{ role: 'user', content: prompt }] })
+        });
+        let data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((data.error && (data.error.message || data.error)) || ('HTTP ' + res.status));
+        return ((data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '').trim();
+    }
+
+    async function runGeoAiAnalysis(auto, mondayOverride) {
+        if (currentUser.role !== 'superadmin' || geoAiBusy) return;
+        let s = readGeoAiSettings();
+        if (!geoAiReady(s)) { if (!auto) { showToast('Сначала укажите Base URL и API-ключ', 'red'); renderGeoAiSettings(true); } return; }
+        let monday = mondayOverride || geoAiWeek;
+        let btn = document.getElementById('geoAiRunBtn');
+        let box = document.getElementById('geoAiReport');
+        geoAiBusy = true;
+        if (btn && !auto) { btn.disabled = true; btn.lastChild.textContent = 'Разбираем… (до пары минут)'; }
+        try {
+            let days = [0, 1, 2, 3, 4, 5, 6].map(i => geoAddDays(monday, i));
+            let snaps = await Promise.all(days.map(d => db.ref(getPolyPath(currentUser.polygon, `geo_incidents/${d}`)).once('value')));
+            let items = [];
+            snaps.forEach(sn => items.push(...normalizeGeoItems(Object.values(sn.val() || {}))));
+            if (!items.length) { if (!auto) showToast('За эту неделю сбоев нет — разбирать нечего', 'blue'); return; }
+            let text = await callGeoAi(s, buildGeoAiPrompt(monday, items));
+            if (!text) throw new Error('Пустой ответ модели');
+            let report = { text, at: Date.now(), model: s.model || 'claude-opus-5-5', incidents: items.length, auto: !!auto };
+            await db.ref(getPolyPath(currentUser.polygon, `geo_ai_reports/${monday}`)).set(report);
+            if (monday === geoAiWeek && box) box.innerHTML = renderGeoAiReport(report);
+            showToast(auto ? 'Готов ИИ-разбор сбоев за неделю — смотрите в «Аналитике»' : 'Разбор готов', 'green');
+        } catch (e) {
+            if (!auto) showToast('ИИ-разбор не удался: ' + e.message, 'red');
+            else console.log('auto geo ai: ' + e.message);
+        } finally {
+            geoAiBusy = false;
+            if (btn) { btn.disabled = false; btn.lastChild.textContent = 'Разобрать неделю'; }
+        }
+    }
+
+    // «В конце недели»: в воскресенье после 20:10 — текущая неделя, а с понедельника — прошедшая, если её ещё не разобрали
+    function maybeAutoGeoAiAnalysis() {
+        if (!geoAiReady(readGeoAiSettings())) return;
+        let today = getTodayDateStr();
+        let thisMonday = mondayOf(today);
+        let isSundayEvening = geoAddDays(thisMonday, 6) === today && moscowMinuteOfDay(Date.now()) >= DAY_END_MINUTE;
+        let target = isSundayEvening ? thisMonday : geoAddDays(thisMonday, -7);
+        db.ref(getPolyPath(currentUser.polygon, `geo_ai_reports/${target}`)).once('value').then(snap => {
+            if (!snap.val()) runGeoAiAnalysis(true, target);
+        }).catch(() => {});
     }
 </script>
 </body>
