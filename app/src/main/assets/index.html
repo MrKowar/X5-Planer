@@ -620,6 +620,24 @@
         @keyframes gpPulse { from { transform: scale(.55); opacity: 1; } to { transform: scale(1.9); opacity: 0; } }
         @media (prefers-reduced-motion: reduce) { .gp-pin::before { animation: none; opacity: .45; } .gp-locate.busy svg, .gp-ticket { animation: none; } }
         .leaflet-container { font-family: inherit; }
+        /* Небо со спутниками (Гео+) */
+        .gp-sky { display: grid; grid-template-columns: minmax(120px, 44%) 1fr; gap: 14px; align-items: center; padding: 12px; border-radius: 16px; background: var(--gp-surface); border: 1px solid var(--gp-border); }
+        .gp-sky-plot svg { width: 100%; height: auto; display: block; overflow: visible; }
+        .gp-card .gp-sky-ring { fill: none; stroke: var(--gp-border); stroke-width: 1.2; }
+        .gp-card .gp-sky-dir { fill: var(--gp-subtle); stroke: none; font: 700 11px system-ui, sans-serif; text-anchor: middle; }
+        .gp-card .gp-sat { stroke-width: 2; transition: transform 600ms cubic-bezier(0.23, 1, 0.32, 1); }
+        .gp-card .gp-sat-l { fill: var(--gp-text); stroke: none; font: 700 8px system-ui, sans-serif; text-anchor: middle; }
+        .gp-sky-state { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; padding: 5px 10px; border-radius: 999px; background: var(--gp-surface); color: var(--gp-muted); border: 1px solid var(--gp-border); }
+        .gp-sky-state.good { background: var(--gp-success-soft); color: var(--gp-success); border-color: transparent; }
+        .gp-sky-state.warn { background: var(--gp-warn-soft); color: var(--gp-warn); border-color: transparent; }
+        .gp-sky-state.jam { background: var(--gp-danger-soft); color: var(--gp-danger); border-color: transparent; }
+        .gp-sky-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 8px; }
+        .gp-sky-nums b { display: block; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gp-text); }
+        .gp-sky-nums span { font-size: 11px; color: var(--gp-subtle); }
+        .gp-sky-legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--gp-subtle); }
+        .gp-dot.amber { background: #F59E0B; }
+        @media (max-width: 360px) { .gp-sky { grid-template-columns: 1fr; } .gp-sky-plot { max-width: 200px; margin: 0 auto; } }
+
         /* Поля и отчёт ИИ-разбора */
         .gp-input { margin: 0 !important; height: 48px; border: 1.5px solid var(--gp-border) !important; border-radius: 12px !important; background: var(--gp-surface); font-size: 16px !important; color: var(--gp-text); padding: 0 14px !important; transition: border-color 150ms ease-out; }
         .gp-input:focus { outline: none; border-color: var(--gp-primary) !important; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
@@ -989,6 +1007,30 @@
             </header>
             <div id="geoPlusStatus"></div>
             <div id="geoMapWrap" style="display:none;">
+                <div class="gp-sky" id="gpSky">
+                    <div class="gp-sky-plot">
+                        <svg id="gpSkySvg" viewBox="-110 -110 220 220" aria-label="Спутники на небе">
+                            <circle r="100" class="gp-sky-ring"/><circle r="66.7" class="gp-sky-ring"/><circle r="33.3" class="gp-sky-ring"/>
+                            <path d="M0 -100V100M-100 0H100" class="gp-sky-ring"/>
+                            <text y="-103" class="gp-sky-dir">С</text><text x="104" y="4" class="gp-sky-dir">В</text>
+                            <text y="111" class="gp-sky-dir">Ю</text><text x="-104" y="4" class="gp-sky-dir">З</text>
+                            <g id="gpSkySats"></g>
+                        </svg>
+                    </div>
+                    <div class="gp-sky-side">
+                        <div class="gp-sky-state" id="gpSkyState">Ищем спутники…</div>
+                        <div class="gp-sky-nums">
+                            <div><b id="gpSkyUsed">—</b><span>в расчёте</span></div>
+                            <div><b id="gpSkyView">—</b><span>в небе</span></div>
+                            <div><b id="gpSkyAcc">—</b><span>погрешность</span></div>
+                        </div>
+                        <div class="gp-sky-legend"><span><i class="gp-dot green"></i>сильный</span><span><i class="gp-dot amber"></i>средний</span><span><i class="gp-dot red"></i>слабый</span></div>
+                    </div>
+                </div>
+                <div class="gp-seg" role="group" aria-label="Слой карты" id="gpLayerSeg" style="grid-template-columns: 1fr 1fr; margin: 16px 0 12px;">
+                    <button type="button" aria-pressed="true" data-layer="zones" onclick="setGeoMapLayer('zones')">Сбои</button>
+                    <button type="button" aria-pressed="false" data-layer="signal" onclick="setGeoMapLayer('signal')">Сигнал</button>
+                </div>
                 <div class="gp-stats" id="geoZoneStats"></div>
                 <div class="gp-map-box">
                     <div id="geoMap" class="gp-map"></div>
@@ -997,7 +1039,7 @@
                         <button class="gp-fab" onclick="zoomGeoMap(-1)" aria-label="Отдалить"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
                     </div>
                     <button class="gp-fab gp-locate" onclick="locateMeOnGeoMap()" aria-label="Где я сейчас"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" class="gp-fill"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>
-                    <div class="gp-legend" aria-hidden="true">
+                    <div class="gp-legend" aria-hidden="true" id="gpLegend">
                         <span><i class="gp-dot red"></i>Сбой</span><span><i class="gp-dot green"></i>Гео вернулось</span><span><i class="gp-dot blue"></i>Вы</span>
                     </div>
                 </div>
@@ -1706,7 +1748,7 @@
     let rainyDays = [];
     let profitableDays = {};
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-    const APP_VERSION = 19
+    const APP_VERSION = 20
     ; // Обновлена версия для вызова модалки
         function saveOfflineCache(key, data) {
         try {
@@ -2235,10 +2277,9 @@
         } else if (lastSeenVersion < APP_VERSION) {
             let cl = document.getElementById('changelogContent');
             cl.innerHTML = `<ul>
-                <li><b>🗺️ Гео+:</b> Карта мест, где пропадает гео, напоминания и подсказка, куда отойти. Включается ключом от главного администратора.</li>
-                <li><b>📡 Геолокация:</b> Местоположение теперь определяется так же, как в Google Картах.</li>
-                <li><b>🧭 Новое меню:</b> Главные разделы внизу экрана — «Заявки», «График», «Мои сбои», «Топ сбоев», остальное в «Ещё».</li>
-                <li><b>💡 Тёмная тема:</b> Потяните шнурок лампы под шапкой — свет погаснет. Потяните ещё раз — включится.</li>
+                <li><b>🔄 Гео+, проверка:</b> Если гео улетело — 10 перезапусков, потом перепроверка через 8 секунд. Всё в порядке — дальше проверка раз в минуту.</li>
+                <li><b>🛰 Спутники:</b> Во вкладке «Мои сбои» видно, сколько спутников ловит телефон и какая погрешность. На карте слой «Сигнал»: где глушат — красным, где хорошо — зелёным.</li>
+                <li><b>📡 Глушение:</b> Когда похоже на глушение, приложение само сбрасывает данные спутников, чтобы телефон быстрее их поймал. Если гео не вернулось за 10 минут — подскажет перезагрузить телефон.</li>
             </ul>`;
             // Здесь только изменения ЭТОЙ версии — старые пункты удаляем при каждом выпуске
             document.getElementById('changelogModal').style.display = 'flex';
@@ -2576,7 +2617,8 @@
         if (tab === 'vacations') {
             renderAllVacations();
         }
-        if (tab === 'myGeo') { loadMyGeoIncidents(); renderGeoPlusStatus(); }
+        if (tab === 'myGeo') { loadMyGeoIncidents(); renderGeoPlusStatus(); startSkyLoop(); }
+        else stopSkyLoop();
         updateBottomNav(tab);
         closeMoreSheet();
         window.scrollTo(0, 0);
@@ -3913,7 +3955,7 @@ function submitReport(isNoComment) {
                 isAdmin ? 'У администраторов Гео+ включён всегда' : `Гео+ активен до ${formatBlockTime(geoPlusUntil)}`}</div>`;
             if (pill) pill.style.display = '';
             wrap.style.display = 'block';
-            if (document.getElementById('myGeoTab').style.display !== 'none') ensureGeoMap();
+            if (document.getElementById('myGeoTab').style.display !== 'none') { ensureGeoMap(); startSkyLoop(); }
             return;
         }
         if (pill) pill.style.display = 'none';
@@ -4184,6 +4226,119 @@ function submitReport(isNoComment) {
             </button>`).join('');
     }
 
+    // ---------- Гео+: спутники сейчас (небо) ----------
+    const GNSS_NAMES = { 1: 'G', 2: 'S', 3: 'R', 4: 'J', 5: 'C', 6: 'E', 7: 'I' }; // GPS, SBAS, ГЛОНАСС, QZSS, BeiDou, Galileo, NavIC
+    var skyTimer = null; // var — функцию могут вызвать раньше, чем дойдёт до этой строки
+
+    function startSkyLoop() {
+        if (skyTimer || !hasGeoPlus()) return;
+        if (!(window.AndroidApp && window.AndroidApp.getGnssSnapshot)) {
+            document.getElementById('gpSkyState').textContent = 'Спутники видны только в приложении';
+            return;
+        }
+        try { window.AndroidApp.startGnssPreview(); } catch (e) {}
+        let tick = () => {
+            try { renderSky(JSON.parse(window.AndroidApp.getGnssSnapshot() || '{}')); } catch (e) {}
+        };
+        tick();
+        skyTimer = setInterval(tick, 1000);
+    }
+    function stopSkyLoop() {
+        if (!skyTimer) return;
+        clearInterval(skyTimer); skyTimer = null;
+        try { window.AndroidApp.stopGnssPreview(); } catch (e) {}
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') stopSkyLoop();
+        else if (currentTabName === 'myGeo') startSkyLoop();
+    });
+
+    function renderSky(g) {
+        let sats = (g.sats || []).filter(s => s.el >= 0);
+        let color = s => s.s >= 35 ? '#10B981' : (s.s >= 25 ? '#F59E0B' : '#EF4444');
+        document.getElementById('gpSkySats').innerHTML = sats.map(s => {
+            let r = (90 - Math.min(90, Math.max(0, s.el))) / 90 * 100;
+            let a = s.az * Math.PI / 180;
+            let x = (r * Math.sin(a)).toFixed(1), y = (-r * Math.cos(a)).toFixed(1);
+            let c = color(s);
+            // залитый кружок — спутник участвует в расчёте координат, контур — только виден
+            return `<g style="transform: translate(${x}px, ${y}px)" class="gp-sat"><circle r="7.5" fill="${s.u ? c : 'transparent'}" stroke="${c}" stroke-width="2"/>
+                    <text class="gp-sat-l" y="3"${s.u ? ' style="fill:#fff"' : ''}>${GNSS_NAMES[s.c] || '?'}</text></g>`;
+        }).join('');
+        let fresh = Date.now() - (g.statusTs || 0) < 15000;
+        document.getElementById('gpSkyUsed').textContent = fresh ? g.used : '—';
+        document.getElementById('gpSkyView').textContent = fresh ? g.inView : '—';
+        document.getElementById('gpSkyAcc').textContent = (g.acc !== null && g.acc !== undefined && Date.now() - (g.fixTs || 0) < 60000) ? `±${g.acc} м` : '—';
+        let st = document.getElementById('gpSkyState');
+        if (!fresh) { st.className = 'gp-sky-state'; st.textContent = 'Ищем спутники…'; }
+        else if (g.jammed) { st.className = 'gp-sky-state jam'; st.textContent = 'Похоже на глушение'; }
+        else if ((g.acc || 0) > 30 || g.used < 6) { st.className = 'gp-sky-state warn'; st.textContent = 'Сигнал средний'; }
+        else { st.className = 'gp-sky-state good'; st.textContent = 'Сигнал хороший'; }
+    }
+
+    // ---------- Гео+: слой «Сигнал» — сетка квадратов по замерам курьеров ----------
+    var geoMapLayer = 'zones';
+    let signalCells = [];
+    let signalLoadedAt = 0;
+    const SIGNAL_DAYS = 3;
+    const CELL_DEG = 0.0011; // ≈ 120 м по широте
+
+    function setGeoMapLayer(layer) {
+        geoMapLayer = layer;
+        document.querySelectorAll('#gpLayerSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.layer === layer)));
+        document.getElementById('gpLegend').innerHTML = layer === 'signal'
+            ? '<span><i class="gp-dot green"></i>Хорошо</span><span><i class="gp-dot amber"></i>Средне</span><span><i class="gp-dot red"></i>Глушат</span>'
+            : '<span><i class="gp-dot red"></i>Сбой</span><span><i class="gp-dot green"></i>Гео вернулось</span><span><i class="gp-dot blue"></i>Вы</span>';
+        // Цифры и список зон относятся к сбоям — в режиме «Сигнал» их прячем
+        document.getElementById('geoZoneStats').style.display = layer === 'signal' ? 'none' : '';
+        document.getElementById('geoZonesList').style.display = layer === 'signal' ? 'none' : '';
+        if (layer === 'signal' && Date.now() - signalLoadedAt > 5 * 60000) loadSignalGrid();
+        else renderGeoMapLayers();
+    }
+
+    function loadSignalGrid() {
+        signalLoadedAt = Date.now();
+        let today = getTodayDateStr();
+        let days = Array.from({ length: SIGNAL_DAYS }, (_, i) => geoAddDays(today, -i));
+        Promise.all(days.map(d => db.ref(getPolyPath(currentUser.polygon, `gnss_samples/${d}`)).once('value')))
+            .then(snaps => {
+                let cells = {};
+                let lngStep = CELL_DEG / Math.cos(51.8 * Math.PI / 180);
+                snaps.forEach(s => Object.values(s.val() || {}).forEach(p => {
+                    if (!p || typeof p.lat !== 'number') return;
+                    let i = Math.floor(p.lat / CELL_DEG), j = Math.floor(p.lng / lngStep);
+                    let c = cells[i + '_' + j] || (cells[i + '_' + j] = { i, j, acc: [], used: [], users: new Set(), last: 0 });
+                    if (p.acc >= 0) c.acc.push(p.acc);
+                    if (p.view > 0) c.used.push(p.used);
+                    c.users.add(p.userKey); c.last = Math.max(c.last, p.ts || 0);
+                }));
+                signalCells = Object.values(cells).map(c => {
+                    let med = arr => { if (!arr.length) return null; let a = arr.slice().sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; };
+                    let acc = med(c.acc), used = c.used.length ? Math.round(c.used.reduce((s, v) => s + v, 0) / c.used.length) : null;
+                    let state = (acc !== null && acc > 75) || (used !== null && used < 4) ? 'jam' : ((acc !== null && acc > 30) || (used !== null && used < 6) ? 'warn' : 'good');
+                    return { lat0: c.i * CELL_DEG, lng0: c.j * lngStep, lat1: (c.i + 1) * CELL_DEG, lng1: (c.j + 1) * lngStep,
+                             n: c.acc.length || c.used.length, acc, used, couriers: c.users.size, last: c.last, state };
+                });
+                renderGeoMapLayers();
+            })
+            .catch(e => console.log('signal grid: ' + e.message));
+    }
+
+    function drawSignalLayer() {
+        let col = { good: '#10B981', warn: '#F59E0B', jam: '#EF4444' };
+        let label = { good: 'Сигнал хороший', warn: 'Сигнал средний', jam: 'Похоже на глушение' };
+        if (!signalCells.length) {
+            geoMapLayers.push(L.marker(geoMap.getCenter(), { icon: L.divIcon({ className: '', html: '<div class="gp-legend" style="position:static; white-space:nowrap;">Замеров пока нет — они копятся, пока курьеры с Гео+ на линии</div>', iconSize: [280, 30], iconAnchor: [140, 15] }) }).addTo(geoMap));
+            return;
+        }
+        signalCells.forEach(c => {
+            geoMapLayers.push(L.rectangle([[c.lat0, c.lng0], [c.lat1, c.lng1]], { color: col[c.state], weight: 1, opacity: .6, fillColor: col[c.state], fillOpacity: .32 })
+                .bindPopup(`<div style="font-size:13px; line-height:1.45;"><b>${label[c.state]}</b><br>Спутников в расчёте: ~${c.used ?? '—'}<br>Погрешность: ${c.acc !== null ? '±' + c.acc + ' м' : '—'}<br>Замеров: ${c.n} · курьеров: ${c.couriers}<br><span style="color:#64748b;">последний ${formatBlockTime(c.last)}</span></div>`)
+                .addTo(geoMap));
+        });
+        geoMap.fitBounds(signalCells.map(c => [[c.lat0, c.lng0], [c.lat1, c.lng1]]).flat(), { padding: [30, 30], maxZoom: 16 });
+    }
+
     function zoomGeoMap(delta) {
         if (!geoMap) return;
         if (geoMapEngine === 'google') geoMap.setZoom(geoMap.getZoom() + delta);
@@ -4337,6 +4492,7 @@ function submitReport(isNoComment) {
         }
 
         geoMapLayers.push(L.polygon(zonePath, { color: '#2563eb', weight: 2, opacity: .6, fillOpacity: .05, interactive: false }).addTo(geoMap));
+        if (geoMapLayer === 'signal') { drawSignalLayer(); return; }
         geoZones.forEach((z, i) => {
             geoMapLayers.push(L.circle([z.lat, z.lng], { radius: z.r, color: '#ef4444', weight: 1.5, fillColor: '#ef4444', fillOpacity: .18, interactive: false }).addTo(geoMap));
             geoMapLayers.push(L.marker([z.lat, z.lng], { icon: geoPinIcon('', i + 1) }).bindPopup(geoZonePopup(z, i, fmt)).addTo(geoMap));

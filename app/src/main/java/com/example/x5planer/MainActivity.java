@@ -801,6 +801,22 @@ public class MainActivity extends AppCompatActivity {
                     .apply();
         }
 
+        // Гео+: спутники и погрешность для карты сигнала в приложении
+        @android.webkit.JavascriptInterface
+        public void startGnssPreview() {
+            runOnUiThread(() -> GnssMonitor.startPreview(MainActivity.this));
+        }
+
+        @android.webkit.JavascriptInterface
+        public void stopGnssPreview() {
+            runOnUiThread(() -> GnssMonitor.stopPreview(MainActivity.this));
+        }
+
+        @android.webkit.JavascriptInterface
+        public String getGnssSnapshot() {
+            return GnssMonitor.snapshotJson();
+        }
+
         // Проблемные зоны (JSON-массив) — служба по ним напоминает и подсказывает, куда отойти
         @android.webkit.JavascriptInterface
         public void setGeoZones(String zonesJson) {

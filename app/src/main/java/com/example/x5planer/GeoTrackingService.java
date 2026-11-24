@@ -87,7 +87,11 @@ public class GeoTrackingService extends Service {
     private Location lastGood = null;          // последняя точка в рабочей зоне
     private long lastGoodTs = 0;
     private double lossLat = Double.NaN, lossLng = Double.NaN; // где пропало гео в текущем сбое
-    private boolean firstCheckPending = false; // идёт «мягкая» проверка через 10 с, ещё без перезапуска
+    private boolean confirmPending = false;    // Гео+: гео вернулось — ждём перепроверку через 8 с
+    private boolean rebootAdvised = false;     // Гео+: совет перезагрузить телефон уже показан в этом сбое
+    private long lastAgpsReset = 0;            // Гео+: когда последний раз сбрасывали A-GPS
+    private long lastJamNotice = 0;
+    private static final long CONFIRM_MS = 8000;
 
     private boolean isGeoPlus() {
         SharedPreferences p = getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
@@ -109,26 +113,56 @@ public class GeoTrackingService extends Service {
         e.apply();
     }
 
-    // Гео+: точка вне зоны — сначала просто перепроверяем через 10 с, перезапуск только если опять плохо
-    private void beginSoftCheck() {
-        restartInProgress = true;
-        firstCheckPending = true;
-        startIncident();
-        markLossPoint();
-        saveOpenIncident();
-        notifyHintIfKnownZone();
-        handler.postDelayed(() -> { if (!stopped) requestFreshFix(); }, CYCLE_MS);
+    // Замер сигнала раз в точку (обычно раз в минуту) — из них в приложении строится сетка «где глушат»
+    private long lastSampleTs = 0;
+    private void recordGnssSample(Location l) {
+        long now = System.currentTimeMillis();
+        if (now - lastSampleTs < 50000) return;
+        lastSampleTs = now;
+        SharedPreferences prefs = getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
+        String userKey = prefs.getString("user_key", "");
+        String base = prefs.getString("incidents_path", "");
+        if (userKey.isEmpty() || !base.endsWith("geo_incidents")) return;
+        String path = base.substring(0, base.length() - "geo_incidents".length()) + "gnss_samples";
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        fmt.setTimeZone(MOSCOW);
+        try {
+            JSONObject rec = new JSONObject()
+                    .put("userKey", userKey)
+                    .put("ts", now)
+                    .put("lat", Math.round(l.getLatitude() * 1e5) / 1e5)
+                    .put("lng", Math.round(l.getLongitude() * 1e5) / 1e5)
+                    .put("acc", l.hasAccuracy() ? Math.round(l.getAccuracy()) : -1)
+                    .put("used", GnssMonitor.usedInFix)
+                    .put("view", GnssMonitor.inView)
+                    .put("cn0", Math.round(GnssMonitor.avgCn0));
+            MainActivity.enqueueSyncItem(this, path + "/" + fmt.format(new Date(now)) + "/" + userKey + "_" + now, rec.toString());
+        } catch (Exception ignored) {}
     }
 
-    // Сбой оказался мгновенным (через 10 с всё в порядке) — не записываем его
-    private void discardIncident() {
-        incidentStartTs = 0;
-        incidentCycles = 0;
-        incidentWarned = false;
-        lossLat = Double.NaN; lossLng = Double.NaN;
-        getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE).edit()
-                .remove("open_start").remove("open_cycles").remove("open_had_fix")
-                .remove("open_loss_lat").remove("open_loss_lng").apply();
+    // Похоже на глушение — сбрасываем устаревшие данные спутников (A-GPS), чтобы телефон быстрее
+    // поймал настоящие спутники; не чаще раза в 5 минут, иначе он только дольше ищет
+    private void checkJamming() {
+        if (!GnssMonitor.looksJammed()) return;
+        long now = System.currentTimeMillis();
+        if (now - lastAgpsReset < 5 * 60000) return;
+        lastAgpsReset = now;
+        resetAgps();
+        if (now - lastJamNotice > 30 * 60000) {
+            lastJamNotice = now;
+            showZoneNotification("📡 Похоже на глушение GPS — сбросили данные спутников, телефон ищет их заново");
+        }
+    }
+
+    private void resetAgps() {
+        if (locationManager == null) return;
+        try {
+            locationManager.sendExtraCommand(LocationManager.GPS_PROVIDER, "delete_aiding_data", null);
+            locationManager.sendExtraCommand(LocationManager.GPS_PROVIDER, "force_xtra_injection", new Bundle());
+            locationManager.sendExtraCommand(LocationManager.GPS_PROVIDER, "force_time_injection", new Bundle());
+        } catch (Exception ignored) {
+            // На части телефонов команда запрещена — тогда просто продолжаем обычные перезапуски
+        }
     }
 
     // Проблемные зоны приходят из index.html: [{id, lat, lng, r, couriers, count, hintDist, hintDir}]
@@ -305,13 +339,12 @@ public class GeoTrackingService extends Service {
                 if (stopped || restartInProgress) return;
                 // Таймер мог «проспать» 20:10 в режиме энергосбережения — проверяем при каждой точке
                 if (isDayOver()) { autoEndIfDayOver(); return; }
+                GnssMonitor.onLocation(location);
+                if (isGeoPlus()) { recordGnssSample(location); checkJamming(); }
                 if (isInZone(location)) {
                     lastGood = location;
                     lastGoodTs = System.currentTimeMillis();
                     checkZoneReminder(location);
-                } else if (isGeoPlus()) {
-                    // Гео+: сначала обычная перепроверка через 10 с, перезапуск — только если снова вне зоны
-                    beginSoftCheck();
                 } else {
                     // Вне зоны — сначала перезапускаем определение местоположения, потом перепроверяем
                     restartLocationAndRecheck();
@@ -339,7 +372,8 @@ public class GeoTrackingService extends Service {
             fused = null;
         }
 
-        if (!registerUpdates()) stopSelf();
+        if (!registerUpdates()) { stopSelf(); return; }
+        GnssMonitor.start(this);
     }
 
     private com.google.android.gms.location.FusedLocationProviderClient fused;
@@ -392,6 +426,13 @@ public class GeoTrackingService extends Service {
         if (incidentStartTs == 0) { startIncident(); markLossPoint(); }
         incidentCycles++;
         saveOpenIncident();
+        if (isGeoPlus()) {
+            checkJamming();
+            if (!rebootAdvised && System.currentTimeMillis() - incidentStartTs > 10 * 60000) {
+                rebootAdvised = true;
+                showZoneNotification("🔁 Гео не восстанавливается больше 10 минут — перезагрузите телефон");
+            }
+        }
         showRestartNotification("🔄 Перезапуск геолокации… (попытка " + incidentCycles + ")", 0);
         for (int step = 1; step <= RESTART_TOGGLES; step++) {
             final boolean turnOn = step % 2 == 0;
@@ -458,18 +499,16 @@ public class GeoTrackingService extends Service {
             verifyListener = null;
         }
         if (location != null) incidentHadFix = true;
-        if (firstCheckPending) {
-            firstCheckPending = false;
-            if (inZone) {
-                // Через 10 с всё нормально — это был мгновенный скачок, сбой не записываем
-                restartInProgress = false;
-                lastGood = location; lastGoodTs = System.currentTimeMillis();
-                discardIncident();
-            } else {
-                handler.post(this::restartLocationAndRecheck);
-            }
+        if (location != null) GnssMonitor.onLocation(location);
+        if (inZone && isGeoPlus() && !confirmPending) {
+            // Гео+: гео вернулось — человек встал на место; перепроверяем через 8 с, и только потом считаем, что всё в порядке
+            confirmPending = true;
+            if (location != null) { lastGood = location; lastGoodTs = System.currentTimeMillis(); }
+            showRestartNotification("📍 Гео вернулось — перепроверка через 8 секунд…", 0);
+            handler.postDelayed(() -> { if (!stopped) requestFreshFix(); }, CONFIRM_MS);
             return;
         }
+        confirmPending = false;
         if (inZone) {
             restartInProgress = false;
             if (location != null) { lastGood = location; lastGoodTs = System.currentTimeMillis(); }
@@ -495,6 +534,7 @@ public class GeoTrackingService extends Service {
         incidentCycles = 0;
         incidentHadFix = false;
         incidentWarned = false;
+        rebootAdvised = false;
     }
 
     private void saveOpenIncident() {
@@ -657,6 +697,7 @@ public class GeoTrackingService extends Service {
         handler.removeCallbacksAndMessages(null);
         if (freshFixCts != null) { freshFixCts.cancel(); freshFixCts = null; }
         if (fused != null && fusedCallback != null) fused.removeLocationUpdates(fusedCallback);
+        if (locationListener != null) GnssMonitor.stop(this);
         if (locationManager != null && locationListener != null) {
             locationManager.removeUpdates(locationListener);
         }
