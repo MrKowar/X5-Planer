@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Гео+: сброс кэша A-GPS при глушении -->
+    <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
@@ -46,6 +48,18 @@
         <service
             android:name=".GeoTrackingService"
             android:foregroundServiceType="location"
+            android:exported="false" />
+        <!-- После обновления — уведомление «Нажмите, чтобы открыть» -->
+        <receiver
+            android:name=".UpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <!-- Результат установки обновления (PackageInstaller) -->
+        <receiver
+            android:name=".UpdateInstallReceiver"
             android:exported="false" />
         <!-- Добавляем FileProvider для установки APK -->
         <provider
