@@ -87,11 +87,11 @@ public class GeoTrackingService extends Service {
     private Location lastGood = null;          // последняя точка в рабочей зоне
     private long lastGoodTs = 0;
     private double lossLat = Double.NaN, lossLng = Double.NaN; // где пропало гео в текущем сбое
-    private boolean confirmPending = false;    // Гео+: гео вернулось — ждём перепроверку через 8 с
+    private boolean confirmPending = false;    // Гео+: гео вернулось — один раз перепроверяем через 10 с
     private boolean rebootAdvised = false;     // Гео+: совет перезагрузить телефон уже показан в этом сбое
     private long lastAgpsReset = 0;            // Гео+: когда последний раз сбрасывали A-GPS
     private long lastJamNotice = 0;
-    private static final long CONFIRM_MS = 8000;
+    private static final long CONFIRM_MS = 10000;
 
     private boolean isGeoPlus() {
         SharedPreferences p = getSharedPreferences(INCIDENT_PREFS, MODE_PRIVATE);
@@ -501,10 +501,10 @@ public class GeoTrackingService extends Service {
         if (location != null) incidentHadFix = true;
         if (location != null) GnssMonitor.onLocation(location);
         if (inZone && isGeoPlus() && !confirmPending) {
-            // Гео+: гео вернулось — человек встал на место; перепроверяем через 8 с, и только потом считаем, что всё в порядке
+            // Гео+: гео вернулось — человек встал на место; один раз перепроверяем через 10 с: на месте — дальше раз в минуту, улетело — снова перезапуски
             confirmPending = true;
             if (location != null) { lastGood = location; lastGoodTs = System.currentTimeMillis(); }
-            showRestartNotification("📍 Гео вернулось — перепроверка через 8 секунд…", 0);
+            showRestartNotification("📍 Гео вернулось — перепроверка через 10 секунд…", 0);
             handler.postDelayed(() -> { if (!stopped) requestFreshFix(); }, CONFIRM_MS);
             return;
         }
